@@ -1,11 +1,11 @@
 ﻿using System;
+using Microsoft.Extensions.Hosting;
 
 namespace SmsSync.Configuration
 {
     public class AppConfiguration
     {
-        public int WorkersCount { get; set; }
-        public TimeSpan ReadInterval { get; set; }
-        public TimeSpan SyncInterval { get; set; }
+        public BackgroundService Background { get; set; }
+        public HttpConfiguration Http { get; set; }
     }
 }

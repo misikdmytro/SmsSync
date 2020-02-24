@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Net.Http;
 using System.Net.Http.Formatting;
+using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
 using Polly;
@@ -18,7 +19,7 @@ namespace SmsSync.Services
     public class MessageService : IMessageService
     {
         private readonly ILogger _logger = Log.ForContext<MessageService>();
-        
+
         private readonly HttpClient _httpClient;
         private readonly int _retryCount;
 
@@ -27,7 +28,11 @@ namespace SmsSync.Services
             _httpClient = new HttpClient
             {
                 BaseAddress = new Uri(configuration.BaseUrl),
-                Timeout = configuration.Timeout
+                Timeout = configuration.Timeout,
+                DefaultRequestHeaders =
+                {
+                    Authorization = new AuthenticationHeaderValue(configuration.TokenScheme, configuration.TokenValue)
+                }
             };
 
             _retryCount = configuration.Retry;
@@ -40,10 +45,10 @@ namespace SmsSync.Services
                 .RetryAsync(_retryCount, (exception, i) => _logger.Warning(exception, "Retry http call"))
                 .ExecuteAsync(async () =>
                 {
-                    var response = await _httpClient.PostAsync($"api/contents", 
+                    var response = await _httpClient.PostAsync($"api/contents",
                         new ObjectContent<Message>(message, new JsonMediaTypeFormatter(), "text/plain"),
                         cancellationToken);
-                    
+
                     if (!response.IsSuccessStatusCode)
                         throw new InvalidOperationException(
                             $"External service returned {response.StatusCode} status code");
