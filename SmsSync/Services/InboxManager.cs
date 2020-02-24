@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Serilog;
 using SmsSync.Models;
 
 namespace SmsSync.Services
@@ -16,6 +17,8 @@ namespace SmsSync.Services
 
     public class InboxManager : IInboxManager
     {
+        private readonly ILogger _logger = Log.ForContext<InboxManager>();
+
         private readonly ConcurrentQueue<UserMessage> _messagesQueue;
         private readonly ConcurrentQueue<UserMessage> _messagesSent;
 
@@ -32,6 +35,10 @@ namespace SmsSync.Services
         public async Task Populate()
         {
             var data = await _repository.ReadAsync();
+            
+            _logger.Information("Populate queue with {N} messages", data.Length);
+            
+            _messagesQueue.Clear();
             foreach (var message in data)
             {
                 _messagesQueue.Enqueue(message);
@@ -40,26 +47,28 @@ namespace SmsSync.Services
 
         public bool TakeToSend(out UserMessage message)
         {
-            return _messagesQueue.TryDequeue(out message);
+            var result = _messagesQueue.TryDequeue(out message);
+            _logger.Debug("Take message {@Message} to send", message);
+            return result;
         }
 
         public void MarkAsSend(UserMessage message)
         {
+            _logger.Debug("Mark message {@Message} as send", message);
             _messagesSent.Enqueue(message);
         }
 
         public async Task CommitAll()
         {
-            var messages = new List<UserMessage>();
-            while (_messagesSent.TryDequeue(out var message))
-            {
-                messages.Add(message);
-            }
+            var messages = _messagesSent.ToList();
 
             if (messages.Any())
             {
+                _logger.Information("Commit {N} messages", messages.Count);
                 await _repository.Commit(messages.ToArray());
             }
+
+            _messagesSent.Clear();
         }
     }
 }

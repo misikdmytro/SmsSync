@@ -9,7 +9,7 @@ namespace SmsSync.Services
 {
     public interface IInboxRepository
     {
-        Task<IEnumerable<UserMessage>> ReadAsync();
+        Task<UserMessage[]> ReadAsync();
         Task Commit(params UserMessage[] messages);
     }
 
@@ -22,7 +22,7 @@ namespace SmsSync.Services
             _configuration = configuration;
         }
 
-        public async Task<IEnumerable<UserMessage>> ReadAsync()
+        public async Task<UserMessage[]> ReadAsync()
         {
             // ToDo: read from SQL
             return new[]

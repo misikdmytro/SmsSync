@@ -46,7 +46,8 @@ namespace SmsSync.Services
                 .ExecuteAsync(async () =>
                 {
                     var response = await _httpClient.PostAsync($"api/contents",
-                        new ObjectContent<Message>(message, new JsonMediaTypeFormatter(), "text/plain"),
+                        new ObjectContent<Message>(message, new JsonMediaTypeFormatter(), 
+                            System.Net.Mime.MediaTypeNames.Application.Json),
                         cancellationToken);
 
                     if (!response.IsSuccessStatusCode)
