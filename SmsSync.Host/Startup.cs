@@ -1,14 +1,9 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using AutoMapper;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using SmsSync.Background;
 using SmsSync.Configuration;
 using SmsSync.Mapper;
@@ -18,10 +13,9 @@ namespace SmsSync
 {
     public class Startup
     {
-        private readonly IWebHostEnvironment _environment;
-        public IConfiguration Configuration { get; }
-        
-        public Startup(IHostEnvironment env, IWebHostEnvironment environment)
+        private IHostingEnvironment _environment;
+
+        public Startup(IHostingEnvironment env)
         {
             var builder = new ConfigurationBuilder()
                 .SetBasePath(env.ContentRootPath)
@@ -30,11 +24,16 @@ namespace SmsSync
                 .AddEnvironmentVariables();
             
             Configuration = builder.Build();
-            _environment = environment;
+            _environment = env;
         }
+
+        public IConfigurationRoot Configuration { get;  }
 
         public void ConfigureServices(IServiceCollection services)
         {
+            services.AddMvc()
+                .SetCompatibilityVersion(CompatibilityVersion.Version_2_2);
+            
             var configuration = Configuration.GetSection("ServiceConfig").Get<AppConfiguration>();
 
             services.AddSingleton(configuration);
@@ -50,6 +49,8 @@ namespace SmsSync
             else
             {
                 services.AddTransient<IMessageService, MessageService>();
+                services.AddTransient<IInboxRepository>(sp =>
+                    new InboxRepository(configuration.Database));
             }
             
             services.AddSingleton<IOutboxManager, OutboxManager>();
@@ -63,14 +64,15 @@ namespace SmsSync
             services.AddHostedService<SyncHostedService>();
         }
 
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+        // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
+        public void Configure(IApplicationBuilder app, IHostingEnvironment env)
         {
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
             }
 
-            app.UseRouting();
+            app.UseMvc();
         }
     }
 }

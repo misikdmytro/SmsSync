@@ -5,13 +5,14 @@ namespace SmsSync.Models
 {
     public class Notification
     {
-        public long TicketNumber { get; }
-        public string PhoneNumber { get; }
+        public DbSms Sms { get; }
+        
+        public long TicketNumber => Sms.OrderId;
+        public string PhoneNumber => Sms.ClientPhone;
 
-        public Notification(long ticketNumber, string phoneNumber)
+        public Notification(DbSms sms)
         {
-            TicketNumber = ticketNumber;
-            PhoneNumber = phoneNumber;
+            Sms = sms;
         }
 
         public OutboxNotification PrepareForSending()
@@ -19,7 +20,7 @@ namespace SmsSync.Models
             return new OutboxNotification(this);
         }
 
-        public override bool Equals(object? obj)
+        public override bool Equals(object obj)
         {
             if (obj != null && obj is Notification notification)
             {
@@ -66,16 +67,29 @@ namespace SmsSync.Models
         public (NotificationState newState, NotificationState oldState) Promote()
         {
             var oldState = State;
-            State = State switch
+            switch (State)
             {
-                NotificationState.New => NotificationState.WaitForSend,
-                NotificationState.WaitForSend => NotificationState.Sent,
-                NotificationState.Sent => NotificationState.WaitForCommit,
-                NotificationState.WaitForCommit => NotificationState.Committed,
-                NotificationState.Committed => NotificationState.WaitForRemove,
-                NotificationState.WaitForRemove => NotificationState.WaitForRemove,
-                _ => throw new ArgumentOutOfRangeException(nameof(State))
-            };
+                case NotificationState.New:
+                    State = NotificationState.WaitForSend;
+                    break;
+                case NotificationState.WaitForSend:
+                    State = NotificationState.Sent;
+                    break;
+                case NotificationState.Sent:
+                    State = NotificationState.WaitForCommit;
+                    break;
+                case NotificationState.WaitForCommit:
+                    State = NotificationState.Committed;
+                    break;
+                case NotificationState.Committed:
+                    State = NotificationState.WaitForRemove;
+                    break;
+                case NotificationState.WaitForRemove:
+                    State = NotificationState.WaitForRemove;
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(State));
+            }
 
             return (oldState, State);
         }
@@ -83,21 +97,29 @@ namespace SmsSync.Models
         public (NotificationState newState, NotificationState oldState) Rollback()
         {
             var oldState = State;
-            State = State switch
+            switch (State)
             {
-                NotificationState.New => NotificationState.New,
-                NotificationState.WaitForSend => NotificationState.New,
-                NotificationState.Sent => NotificationState.Sent,
-                NotificationState.WaitForCommit => NotificationState.Sent,
-                NotificationState.Committed => NotificationState.Committed,
-                NotificationState.WaitForRemove => NotificationState.Committed,
-                _ => throw new ArgumentOutOfRangeException(nameof(State))
-            };
+                case NotificationState.New:
+                case NotificationState.Sent:
+                case NotificationState.Committed:
+                    break;
+                case NotificationState.WaitForSend:
+                    State = NotificationState.New;
+                    break;
+                case NotificationState.WaitForCommit:
+                    State = NotificationState.Sent;
+                    break;
+                case NotificationState.WaitForRemove:
+                    State = NotificationState.Committed;
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(State));
+            }
 
             return (oldState, State);
         }
 
-        public override bool Equals(object? obj)
+        public override bool Equals(object obj)
         {
             if (obj != null && obj is OutboxNotification notification)
             {

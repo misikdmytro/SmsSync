@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.Loader;
 using System.Threading;
 using System.Threading.Tasks;
@@ -43,7 +44,7 @@ namespace SmsSync.Background
                 try
                 {
                     // 2. Commit
-                    await _repository.Commit(notificationsToCommit);
+                    await _repository.Commit(notificationsToCommit.Select(x => x.Sms).ToArray());
 
                     // 3. Promote notifications
                     _outboxManager.Promote(notificationsToCommit);
@@ -66,7 +67,7 @@ namespace SmsSync.Background
                     var notifications = await _repository.ReadAsync();
                     
                     // 2. Populate data
-                    _outboxManager.Populate(notifications);
+                    _outboxManager.Populate(notifications.Select(x => new Notification(x)).ToArray());
                 }
                 catch (Exception e)
                 {

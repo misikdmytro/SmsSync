@@ -17,8 +17,8 @@ namespace SmsSync.Tests
         private readonly IOutboxManager _outboxManager;
         
         private readonly Notification[] _testData = {
-            new Notification(4, "+1234567"),
-            new Notification(7,"+76543210")
+            new Notification(new DbSms {OrderId = 4, ClientPhone = "+1234567"}),
+            new Notification(new DbSms {OrderId = 7, ClientPhone = "+76543210"})
         };
 
         public InboxManagerTests(ITestOutputHelper testOutputHelper)
@@ -62,7 +62,7 @@ namespace SmsSync.Tests
         public async Task PopulateShouldDoItInSeveralThreads(int readThreadsCount, int writeThreadsCount, int cyclesCount)
         {
             var messages = Enumerable.Range(0, cyclesCount * writeThreadsCount)
-                .Select(x => new Notification(x, Guid.NewGuid().ToString()))
+                .Select(x => new Notification(new DbSms{OrderId = x, ClientPhone = Guid.NewGuid().ToString()}))
                 .ToArray();
 
             var writeTasks = new List<Task>();
