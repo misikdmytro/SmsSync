@@ -58,6 +58,11 @@ namespace SmsSync.Background
                         }
                         catch (Exception e)
                         {
+                            if (userMessage != null)
+                            {
+                                _inboxManager.Rollback(userMessage);
+                            }
+                            
                             _logger.Error(e, "Error during send message");
                         }
                     }

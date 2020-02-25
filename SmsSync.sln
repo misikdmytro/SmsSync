@@ -2,6 +2,8 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SmsSync", "SmsSync\SmsSync.csproj", "{94E6F9F8-077B-45F7-BB14-D5B1A77583B8}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SmsSync.Tests", "SmsSync.Tests\SmsSync.Tests.csproj", "{5A7CCCDD-C413-46FA-9AD0-EB5CBEB2BFFC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -12,5 +14,9 @@ Global
 		{94E6F9F8-077B-45F7-BB14-D5B1A77583B8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{94E6F9F8-077B-45F7-BB14-D5B1A77583B8}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{94E6F9F8-077B-45F7-BB14-D5B1A77583B8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5A7CCCDD-C413-46FA-9AD0-EB5CBEB2BFFC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5A7CCCDD-C413-46FA-9AD0-EB5CBEB2BFFC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5A7CCCDD-C413-46FA-9AD0-EB5CBEB2BFFC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5A7CCCDD-C413-46FA-9AD0-EB5CBEB2BFFC}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

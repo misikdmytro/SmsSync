@@ -1,4 +1,5 @@
-﻿using System.Collections.Concurrent;
+﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -12,63 +13,135 @@ namespace SmsSync.Services
         Task Populate();
         bool TakeToSend(out UserMessage message);
         void MarkAsSend(UserMessage message);
+        void Rollback(UserMessage message);
         Task CommitAll();
     }
 
     public class InboxManager : IInboxManager
     {
+        private class MessageWrapper
+        {
+            private enum MessageState
+            {
+                New,
+                Waiting,
+                Sent
+            }
+
+            public UserMessage Message { get; }
+            public bool CanBeSend => _state == MessageState.New;
+            public bool AlreadySend => _state == MessageState.Waiting;
+
+            private MessageState _state;
+
+            public MessageWrapper(UserMessage message)
+            {
+                Message = message;
+                _state = MessageState.New;
+            }
+
+            public void Promote()
+            {
+                _state = _state switch
+                {
+                    MessageState.New => MessageState.Waiting,
+                    MessageState.Waiting => MessageState.Sent,
+                    MessageState.Sent => MessageState.Sent,
+                    _ => throw new ArgumentOutOfRangeException(nameof(_state))
+                };
+            }
+
+            public void Rollback()
+            {
+                _state = _state switch
+                {
+                    MessageState.New => MessageState.New,
+                    MessageState.Waiting => MessageState.New,
+                    MessageState.Sent => MessageState.Sent,
+                    _ => throw new ArgumentOutOfRangeException(nameof(_state))
+                };
+            }
+        }
+
         private readonly ILogger _logger = Log.ForContext<InboxManager>();
 
-        private readonly ConcurrentQueue<UserMessage> _messagesQueue;
-        private readonly ConcurrentQueue<UserMessage> _messagesSent;
+        private readonly ConcurrentDictionary<long, MessageWrapper> _messages;
 
         private readonly IInboxRepository _repository;
+
+        private readonly object _lock = new object();
 
         public InboxManager(IInboxRepository repository)
         {
             _repository = repository;
-
-            _messagesQueue = new ConcurrentQueue<UserMessage>();
-            _messagesSent = new ConcurrentQueue<UserMessage>();
+            _messages = new ConcurrentDictionary<long, MessageWrapper>();
         }
 
         public async Task Populate()
         {
             var data = await _repository.ReadAsync();
-            
+
             _logger.Information("Populate queue with {N} messages", data.Length);
-            
-            _messagesQueue.Clear();
-            foreach (var message in data)
+            lock (_lock)
             {
-                _messagesQueue.Enqueue(message);
+                foreach (var message in data)
+                {
+                    _messages.TryAdd(message.TicketNumber, new MessageWrapper(message));
+                }
             }
         }
 
         public bool TakeToSend(out UserMessage message)
         {
-            var result = _messagesQueue.TryDequeue(out message);
-            _logger.Debug("Take message {@Message} to send", message);
-            return result;
+            lock (_lock)
+            {
+                var (_, value) = _messages.FirstOrDefault(m => m.Value.CanBeSend);
+                value?.Promote();
+                message = value?.Message;
+                return message != null;
+            }
         }
 
         public void MarkAsSend(UserMessage message)
         {
-            _logger.Debug("Mark message {@Message} as send", message);
-            _messagesSent.Enqueue(message);
+            lock (_lock)
+            {
+                _messages[message.TicketNumber].Promote();
+            }
+        }
+
+        public void Rollback(UserMessage message)
+        {
+            lock (_lock)
+            {
+                _messages[message.TicketNumber].Rollback();
+            }
         }
 
         public async Task CommitAll()
         {
-            var messages = _messagesSent.ToList();
-
-            if (messages.Any())
+            UserMessage[] messagesToCommit;
+            lock (_lock)
             {
-                _logger.Information("Commit {N} messages", messages.Count);
-                await _repository.Commit(messages.ToArray());
+                messagesToCommit = _messages.Where(m => m.Value.AlreadySend)
+                    .Select(x => x.Value.Message)
+                    .ToArray();
             }
 
-            _messagesSent.Clear();
+            if (!messagesToCommit.Any())
+            {
+                return;
+            }
+
+            await _repository.Commit(messagesToCommit);
+
+            lock (_lock)
+            {
+                foreach (var message in messagesToCommit)
+                {
+                    _messages.Remove(message.TicketNumber, out _);
+                }
+            }
         }
     }
 }
