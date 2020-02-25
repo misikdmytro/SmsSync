@@ -6,7 +6,7 @@ namespace SmsSync.Configuration
     {
         public int WorkersCount { get; set; }
         public TimeSpan ReadInterval { get; set; }
+        public TimeSpan CommitInterval { get; set; }
         public TimeSpan SyncInterval { get; set; }
-        public int BoundedCapacity { get; set; }
     }
 }

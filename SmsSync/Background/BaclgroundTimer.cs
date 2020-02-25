@@ -9,7 +9,12 @@ namespace SmsSync.Background
 
         public BaclgroundTimer(TimeSpan interval)
         {
-            _timer = new Timer {Interval = interval.TotalMilliseconds};
+            _timer = new Timer
+            {
+                Interval = interval.TotalMilliseconds,
+                AutoReset = true,
+                Enabled = false
+            };
         }
 
         public void Start(ElapsedEventHandler action)
@@ -20,6 +25,8 @@ namespace SmsSync.Background
 
         public void Stop()
         {
+            _timer.AutoReset = false;
+            _timer.Close();
             _timer.Stop();
         }
 

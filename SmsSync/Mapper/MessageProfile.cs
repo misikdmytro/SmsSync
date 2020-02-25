@@ -7,7 +7,7 @@ namespace SmsSync.Mapper
     {
         public MessageProfile()
         {
-            CreateMap<UserMessage, Message>()
+            CreateMap<Notification, Message>()
                 .BeforeMap((src, dest) =>
                 {
                     dest.Source = Constants.Source;

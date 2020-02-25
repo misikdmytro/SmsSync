@@ -15,6 +15,18 @@ namespace SmsSync.Services
     {
         Task SendSms(Message message, CancellationToken cancellationToken);
     }
+    
+    public class FakeMessageService : IMessageService
+    {
+        public void Dispose()
+        {
+        }
+
+        public Task SendSms(Message message, CancellationToken cancellationToken)
+        {
+            return Task.CompletedTask;
+        }
+    }
 
     public class MessageService : IMessageService
     {

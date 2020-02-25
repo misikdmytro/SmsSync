@@ -1,53 +1,30 @@
-﻿using System.Collections.Generic;
-using System.Data;
-using System.Data.SqlClient;
+﻿using System;
 using System.Threading.Tasks;
-using SmsSync.Configuration;
 using SmsSync.Models;
 
 namespace SmsSync.Services
 {
     public interface IInboxRepository
     {
-        Task<UserMessage[]> ReadAsync();
-        Task Commit(params UserMessage[] messages);
+        Task<Notification[]> ReadAsync();
+        Task Commit(params Notification[] messages);
     }
 
-    public class InboxRepository : IInboxRepository
+    public class FakeInboxRepository : IInboxRepository
     {
-        private readonly DatabaseConfiguration _configuration;
-
-        public InboxRepository(DatabaseConfiguration configuration)
+        public Task<Notification[]> ReadAsync()
         {
-            _configuration = configuration;
-        }
-
-        public async Task<UserMessage[]> ReadAsync()
-        {
-            // ToDo: read from SQL
-            return new[]
+            var guid = Guid.NewGuid();
+            return Task.FromResult(new[]
             {
-                new UserMessage
-                {
-                    PhoneNumber = "+1234567",
-                    TicketNumber = 4
-                },
-                new UserMessage
-                {
-                    PhoneNumber = "+76543210",
-                    TicketNumber = 7
-                }
-            };
+                new Notification(guid.GetHashCode(), guid.ToString())
+            });
         }
 
-        public async Task Commit(params UserMessage[] messages)
+        public Task Commit(params Notification[] messages)
         {
             // ToDo: update models
-        }
-
-        private IDbConnection CreateConnection()
-        {
-            return new SqlConnection(_configuration.ConnectionString);
+            return Task.CompletedTask;
         }
     }
 }

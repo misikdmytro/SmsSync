@@ -18,9 +18,10 @@ namespace SmsSync
 {
     public class Startup
     {
+        private readonly IWebHostEnvironment _environment;
         public IConfiguration Configuration { get; }
         
-        public Startup(IHostEnvironment env)
+        public Startup(IHostEnvironment env, IWebHostEnvironment environment)
         {
             var builder = new ConfigurationBuilder()
                 .SetBasePath(env.ContentRootPath)
@@ -29,6 +30,7 @@ namespace SmsSync
                 .AddEnvironmentVariables();
             
             Configuration = builder.Build();
+            _environment = environment;
         }
 
         public void ConfigureServices(IServiceCollection services)
@@ -38,11 +40,19 @@ namespace SmsSync
             services.AddSingleton(configuration);
             services.AddSingleton(configuration.Background);
             services.AddSingleton(configuration.Http);
-            
-            services.AddTransient<InboxRepository>();
-            services.AddTransient<MessageService>();
+            services.AddSingleton(configuration.Database);
 
-            services.AddSingleton<InboxManager>();
+            if (_environment.IsDevelopment())
+            {
+                services.AddTransient<IMessageService, FakeMessageService>();
+                services.AddTransient<IInboxRepository, FakeInboxRepository>();
+            }
+            else
+            {
+                services.AddTransient<IMessageService, MessageService>();
+            }
+            
+            services.AddSingleton<IOutboxManager, OutboxManager>();
             
             var mapper = new MapperConfiguration(config => config.AddProfile<MessageProfile>())
                 .CreateMapper();

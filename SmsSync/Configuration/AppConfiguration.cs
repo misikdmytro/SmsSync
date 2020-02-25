@@ -1,11 +1,9 @@
-﻿using System;
-using Microsoft.Extensions.Hosting;
-
-namespace SmsSync.Configuration
+﻿namespace SmsSync.Configuration
 {
     public class AppConfiguration
     {
-        public BackgroundService Background { get; set; }
+        public BackgroundConfiguration Background { get; set; }
         public HttpConfiguration Http { get; set; }
+        public DatabaseConfiguration Database { get; set; }
     }
 }

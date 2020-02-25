@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Moq;
 using Shouldly;
 using SmsSync.Models;
 using SmsSync.Services;
@@ -15,55 +14,42 @@ namespace SmsSync.Tests
     public class InboxManagerTests
     {
         private readonly ITestOutputHelper _testOutputHelper;
-        private IInboxManager _inboxManager;
-        private Mock<IInboxRepository> _repository;
+        private readonly IOutboxManager _outboxManager;
         
-        private UserMessage[] _testData = new[]
-        {
-            new UserMessage
-            {
-                PhoneNumber = "+1234567",
-                TicketNumber = 4
-            },
-            new UserMessage
-            {
-                PhoneNumber = "+76543210",
-                TicketNumber = 7
-            }
+        private readonly Notification[] _testData = {
+            new Notification(4, "+1234567"),
+            new Notification(7,"+76543210")
         };
 
         public InboxManagerTests(ITestOutputHelper testOutputHelper)
         {
             _testOutputHelper = testOutputHelper;
-            _repository = new Mock<IInboxRepository>();
-            _inboxManager = new InboxManager(_repository.Object);
-
-            _repository.Setup(x => x.ReadAsync())
-                .Returns(Task.FromResult(_testData));
+            _outboxManager = new OutboxManager();
         }
 
         [Fact]
-        public async Task PopulateShouldDoIt()
+        public void PopulateShouldDoIt()
         {
             // Arrange
             // Act
             // Assert
-            await _inboxManager.Populate();
+            _outboxManager.Populate(_testData);
         }
         
         [Fact]
-        public async Task PopulateShouldDoItWithData()
+        public void PopulateShouldDoItWithData()
         {
             // Arrange
             // Act
-            await _inboxManager.Populate();
+            _outboxManager.Populate(_testData);
 
             // Assert
             var count = 0;
-            while (_inboxManager.TakeToSend(out var message))
+            Notification notification;
+            while ((notification = _outboxManager.Next(OutboxNotification.NotificationState.New)) != null)
             {
                 ++count;
-                _testData.ShouldContain(message);
+                _testData.ShouldContain(notification);
             }
             
             _testData.Length.ShouldBe(count);
@@ -76,35 +62,18 @@ namespace SmsSync.Tests
         public async Task PopulateShouldDoItInSeveralThreads(int readThreadsCount, int writeThreadsCount, int cyclesCount)
         {
             var messages = Enumerable.Range(0, cyclesCount * writeThreadsCount)
-                .Select(x => new UserMessage
-                {
-                    TicketNumber = x,
-                    PhoneNumber = Guid.NewGuid().ToString()
-                })
+                .Select(x => new Notification(x, Guid.NewGuid().ToString()))
                 .ToArray();
 
-            var messageNumber = 0;
-            var sync = new object();
-            _repository.Setup(x => x.ReadAsync())
-                .Returns(() => Task.Run(() =>
-                {
-                    int takeMessage;
-                    lock (sync)
-                    {
-                        takeMessage = messageNumber++;
-                    }
-                    
-                    return messages.Skip(takeMessage).Take(1).ToArray();
-                }));
-            
             var writeTasks = new List<Task>();
             for (var i = 0; i < writeThreadsCount; i++)
             {
-                writeTasks.Add(Task.Run(async () =>
+                var index = i;
+                writeTasks.Add(Task.Run(() =>
                 {
                     for (var j = 0; j < cyclesCount; j++)
                     {
-                        await _inboxManager.Populate();
+                        _outboxManager.Populate(messages.Skip(index * cyclesCount + j).Take(1).ToArray());
                     }
                 }));
             }
@@ -118,8 +87,8 @@ namespace SmsSync.Tests
                 {
                     for (var j = 0; j < cyclesCount; j++)
                     {
-                        var result = _inboxManager.TakeToSend(out _);
-                        if (result)
+                        var result = _outboxManager.Next(OutboxNotification.NotificationState.New);
+                        if (result != null)
                             Interlocked.Add(ref readMessages, 1);
                     }
                 }));
@@ -133,10 +102,10 @@ namespace SmsSync.Tests
 
             for (var i = readMessages; i < cyclesCount * writeThreadsCount; i++)
             {
-                _inboxManager.TakeToSend(out _).ShouldBeTrue();
+                _outboxManager.Next(OutboxNotification.NotificationState.New).ShouldNotBeNull();
             }
             
-            _inboxManager.TakeToSend(out _).ShouldBeFalse();
+            _outboxManager.Next(OutboxNotification.NotificationState.New).ShouldBeNull();
         }
     }
 }

@@ -18,15 +18,15 @@ namespace SmsSync.Background
         
         private readonly IMapper _mapper;
 
-        private readonly IInboxManager _inboxManager;
+        private readonly IOutboxManager _outboxManager;
         private readonly IMessageService _messageService;
         
         private readonly IList<BaclgroundTimer> _timers;
 
-        public SyncHostedService(BackgroundConfiguration backgroundConfiguration, IMapper mapper, IInboxManager inboxManager, IMessageService messageService)
+        public SyncHostedService(BackgroundConfiguration backgroundConfiguration, IMapper mapper, IOutboxManager outboxManager, IMessageService messageService)
         {
             _mapper = mapper;
-            _inboxManager = inboxManager;
+            _outboxManager = outboxManager;
             _messageService = messageService;
             
             _timers = Enumerable.Range(0, backgroundConfiguration.WorkersCount)
@@ -36,49 +36,51 @@ namespace SmsSync.Background
 
         public Task StartAsync(CancellationToken cancellationToken)
         {
+            _logger.Information("Start main threads...");
+
             foreach (var timer in _timers)
             {
                 timer.Start(async (sender, args) =>
                 {
                     // 1. Take message
-                    while (_inboxManager.TakeToSend(out var userMessage))
+                    Notification notification;
+                    while ((notification = _outboxManager.Next(OutboxNotification.NotificationState.New)) != null)
                     {
                         try
                         {
-                            _logger.Information("Take message {@Message}", userMessage);
-                            
                             // 2. Map to HTTP contracts
-                            var message = _mapper.Map<Message>(userMessage);
+                            var message = _mapper.Map<Message>(notification);
                         
                             // 3. Send using HTTP
                             await _messageService.SendSms(message, CancellationToken.None);
                             
                             // 4. Mark as sent
-                            _inboxManager.MarkAsSend(userMessage);
+                            _outboxManager.Promote(notification);
                         }
                         catch (Exception e)
                         {
-                            if (userMessage != null)
-                            {
-                                _inboxManager.Rollback(userMessage);
-                            }
-                            
+                            _outboxManager.Rollback(notification);
                             _logger.Error(e, "Error during send message");
                         }
                     }
                 });
             }
+            
+            _logger.Information("Main threads started");
 
             return Task.CompletedTask;
         }
 
         public Task StopAsync(CancellationToken cancellationToken)
         {
+            _logger.Information("Stop main threads...");
+
             foreach (var timer in _timers)
             {
                 timer.Stop();
-                timer.Dispose();
             }
+            
+            _logger.Information("Main threads stoped");
             
             return Task.CompletedTask;
         }

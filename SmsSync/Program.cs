@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Serilog;
 
 namespace SmsSync
 {
@@ -18,6 +19,9 @@ namespace SmsSync
 
         public static IHostBuilder CreateHostBuilder(string[] args) =>
             Host.CreateDefaultBuilder(args)
-                .ConfigureWebHostDefaults(webBuilder => { webBuilder.UseStartup<Startup>(); });
+                .UseSerilog((context, configuration) => configuration
+                    .ReadFrom.Configuration(context.Configuration))
+                .ConfigureWebHostDefaults(webBuilder => { webBuilder
+                    .UseStartup<Startup>(); });
     }
 }
