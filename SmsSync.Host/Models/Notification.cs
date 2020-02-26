@@ -91,7 +91,6 @@ namespace SmsSync.Models
         public (NotificationState newState, NotificationState oldState) Rollback()
         {
             var oldState = State;
-
             State = State.Rollback();
 
             return (oldState, State);
