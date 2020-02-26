@@ -13,61 +13,39 @@ namespace SmsSync.Services
     {
         Task<DbSms[]> ReadAsync();
         Task Commit(DbSms[] messages);
+        Task Fail(DbSms[] messages);
     }
 
-    #region Fake
-
-    public class FakeInboxRepository : IInboxRepository
+    public class InboxRepository : BaseRepository, IInboxRepository
     {
-        public Task<DbSms[]> ReadAsync()
-        {
-            var guid = Guid.NewGuid();
-            return Task.FromResult(new[]
-            {
-                new DbSms
-                {
-                    ClientPhone = guid.ToString(),
-                    LanguageId = 0,
-                    OrderId = guid.GetHashCode()
-                }
-            });
-        }
+        private const string NewState = "NEW";
+        private const string SentState = "SENT";
+        private const string FailState = "FAIL";
 
-        public Task Commit(DbSms[] messages)
-        {
-            // ToDo: update models
-            return Task.CompletedTask;
-        }
-    }
-
-    #endregion
-
-    #region Real
-
-    public class InboxRepository : IInboxRepository
-    {
-        private const string NewState = "NEW"; 
-        private const string SentState = "SENT"; 
+        private const string ReadQuery = @"
+                    SELECT *
+                        FROM dbo.SmsEvents
+                        WHERE State IN (@States)";
         
-        private readonly DatabaseConfiguration _database;
+        private const string UpdateQuery = @"
+                    UPDATE dbo.SmsEvents
+                        SET State = @State, LastUpdateTime = CURRENT_TIMESTAMP
+                        WHERE OrderId = @OrderId AND TerminalId = @TerminalId AND State = @CurrentState";
+
+        private readonly string[] _statesToSelect = {NewState};
 
         public InboxRepository(DatabaseConfiguration database)
+            :base(database)
         {
-            _database = database;
         }
 
         public async Task<DbSms[]> ReadAsync()
         {
             using (var connection = CreateConnection())
             {
-                const string query = @"""
-                    SELECT LanguageId, OrderId, ClientPhone, TerminalId, SetTime, LastUpdateTime, State
-                        FROM dbo.SmsEvents
-                        WHERE State = @State""";
-                
-                var sms = await connection.QueryAsync<DbSms>(query,
-                    new {State = NewState},
-                    commandTimeout:_database.Timeout);
+                var sms = await connection.QueryAsync<DbSms>(ReadQuery,
+                    new {States = _statesToSelect},
+                    commandTimeout: Timeout);
 
                 return sms.ToArray();
             }
@@ -79,23 +57,24 @@ namespace SmsSync.Services
             {
                 foreach (var message in messages)
                 {
-                    const string query = @"""
-                    UPDATE dbo.SmsEvents
-                        SET State = @State, LastUpdateTime = CURRENT_TIMESTAMP
-                        WHERE OrderId = @OrderId AND TerminalId = @TerminalId""";
-
-                    await connection.ExecuteAsync(query, 
-                        new {message.OrderId, message.TerminalId, State = SentState},
-                        commandTimeout:_database.Timeout);
+                    await connection.ExecuteAsync(UpdateQuery,
+                        new {message.OrderId, message.TerminalId, State = SentState, CurrentState = message.State},
+                        commandTimeout: Timeout);
                 }
             }
         }
 
-        private IDbConnection CreateConnection()
+        public async Task Fail(DbSms[] messages)
         {
-            return new SqlConnection(_database.ConnectionString);
+            using (var connection = CreateConnection())
+            {
+                foreach (var message in messages)
+                {
+                    await connection.ExecuteAsync(UpdateQuery,
+                        new {message.OrderId, message.TerminalId, State = FailState, CurrentState = message.State},
+                        commandTimeout: Timeout);
+                }
+            }
         }
     }
-
-    #endregion
 }

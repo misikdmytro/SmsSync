@@ -48,7 +48,7 @@ namespace SmsSync.Background
                         try
                         {
                             // 2. Build message
-                            var message = _messageBuilder.Build(notification.Sms);
+                            var message = await _messageBuilder.Build(notification.Sms);
                         
                             // 3. Send using HTTP
                             await _messageService.SendSms(message, CancellationToken.None);

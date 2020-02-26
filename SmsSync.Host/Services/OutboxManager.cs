@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Serilog;
 using SmsSync.Attributes;
@@ -48,6 +49,11 @@ namespace SmsSync.Services
 
         public Notification Next(OutboxNotification.NotificationState state)
         {
+            if (!state.IsTemporary())
+            {
+                throw new ArgumentException($"State should be temp but was {state}");
+            }
+            
             lock (_lock)
             {
                 return NextNoLock(state);

@@ -1,5 +1,6 @@
 ﻿using System;
 using SmsSync.Attributes;
+using SmsSync.Services;
 
 namespace SmsSync.Models
 {
@@ -17,25 +18,38 @@ namespace SmsSync.Models
             return new OutboxNotification(this);
         }
 
+
+        private bool Equals(Notification other)
+        {
+            return Sms.LanguageId == other.Sms.LanguageId && Sms.OrderId == other.Sms.OrderId &&
+                   Sms.TerminalId == other.Sms.TerminalId && Sms.JobId == other.Sms.JobId
+                   && Sms.ClientPhone == other.Sms.ClientPhone && Sms.SetTime.Equals(other.Sms.SetTime) 
+                   && Sms.LastUpdateTime.Equals(other.Sms.LastUpdateTime) && Sms.State == other.Sms.State 
+                   && Sms.JobDescription.Equals(other.Sms.JobDescription);
+        }
+
         public override bool Equals(object obj)
         {
-            if (obj != null && obj is Notification notification)
-            {
-                return Sms.LanguageId.Equals(notification.Sms.LanguageId)
-                    && Sms.OrderId.Equals(notification.Sms.OrderId)
-                    && Sms.TerminalId.Equals(notification.Sms.TerminalId)
-                    && Sms.ClientPhone.Equals(notification.Sms.ClientPhone);
-            }
-
-            return false;
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != this.GetType()) return false;
+            var notification = (Notification) obj;
+            return Equals(notification);
         }
 
         public override int GetHashCode()
         {
-            return Sms.LanguageId.GetHashCode() 
-                   ^ Sms.OrderId.GetHashCode()
-                   ^ Sms.TerminalId.GetHashCode()
-                   ^ Sms.ClientPhone.GetHashCode();
+            var hashCode = new HashCode();
+            hashCode.Add((int) Sms.LanguageId);
+            hashCode.Add(Sms.OrderId);
+            hashCode.Add(Sms.TerminalId);
+            hashCode.Add(Sms.JobId);
+            hashCode.Add(Sms.ClientPhone);
+            hashCode.Add(Sms.SetTime);
+            hashCode.Add(Sms.LastUpdateTime);
+            hashCode.Add(Sms.State);
+            hashCode.Add(Sms.JobDescription);
+            return hashCode.ToHashCode();
         }
     }
 
@@ -48,12 +62,18 @@ namespace SmsSync.Models
             [TemporaryState] Sent,
             WaitForCommit,
             [TemporaryState] Committed,
-            WaitForRemove
+            WaitForRemove,
+            [TemporaryState] Failed,
+            WaitForMark,
+            [TemporaryState] Marked,
+            WaitForRemoveFail
         }
 
         public Notification Notification { get; }
 
         public NotificationState State { get; private set; }
+
+        private int _rollbackTimes;
 
         public OutboxNotification(Notification notification)
         {
@@ -69,29 +89,7 @@ namespace SmsSync.Models
         public (NotificationState newState, NotificationState oldState) Promote()
         {
             var oldState = State;
-            switch (State)
-            {
-                case NotificationState.New:
-                    State = NotificationState.WaitForSend;
-                    break;
-                case NotificationState.WaitForSend:
-                    State = NotificationState.Sent;
-                    break;
-                case NotificationState.Sent:
-                    State = NotificationState.WaitForCommit;
-                    break;
-                case NotificationState.WaitForCommit:
-                    State = NotificationState.Committed;
-                    break;
-                case NotificationState.Committed:
-                    State = NotificationState.WaitForRemove;
-                    break;
-                case NotificationState.WaitForRemove:
-                    State = NotificationState.WaitForRemove;
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(State));
-            }
+            State = State.Promote();
 
             return (oldState, State);
         }
@@ -99,24 +97,10 @@ namespace SmsSync.Models
         public (NotificationState newState, NotificationState oldState) Rollback()
         {
             var oldState = State;
-            switch (State)
-            {
-                case NotificationState.New:
-                case NotificationState.Sent:
-                case NotificationState.Committed:
-                    break;
-                case NotificationState.WaitForSend:
-                    State = NotificationState.New;
-                    break;
-                case NotificationState.WaitForCommit:
-                    State = NotificationState.Sent;
-                    break;
-                case NotificationState.WaitForRemove:
-                    State = NotificationState.Committed;
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(State));
-            }
+
+            State = ++_rollbackTimes > Constants.Limits.MaxRollbackTimes 
+                ? NotificationState.Failed 
+                : State.Rollback();
 
             return (oldState, State);
         }

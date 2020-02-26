@@ -13,11 +13,15 @@
         public static class Resources
         {
             public const string ResourceName = "MessageContent";
-            public const string ResourcesLocation = "Resource";
-            public const string ResourceFileName = "Messages_{0}";
 
-            public const string OrderIdPlaceholder = "<OrderId>";
-            public const string ServiceIdPlaceholder = "<TicketId>";
+            public const string PlaceIdPlaceholder = "<PlaceId>";
+            public const string ServiceIdPlaceholder = "<ServiceId>";
+            public const string TicketIdPlaceholder = "<TicketId>";
+        }
+
+        public static class Limits
+        {
+            public const int MaxRollbackTimes = 5;
         }
     }
 }
