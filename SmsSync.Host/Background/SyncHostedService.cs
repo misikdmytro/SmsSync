@@ -79,7 +79,7 @@ namespace SmsSync.Background
                 timer.Stop();
             }
             
-            _logger.Information("Main threads stoped");
+            _logger.Information("Main threads stopped");
             
             return Task.CompletedTask;
         }

@@ -7,13 +7,13 @@ namespace SmsSync.Services
 {
     public interface IJobsRepository
     {
-        Task<Job> GetJobById(int jobId, int terminalId);
+        Task<DbJob> GetJobById(int jobId, int terminalId);
     }
 
     public class JobsRepository : BaseRepository, IJobsRepository
     {
         private const string GetJobQuery = @"
-            SELECT JobId, Description, DescriptionRu = Description_ru, DescriptionUa = Description_ua, DescriptionEn = Description_en
+            SELECT DescriptionRu = Description_ru, DescriptionUa = Description_ua, DescriptionEn = Description_en
                 FROM dbo.Jobs
                 WHERE JobId = @JobId AND TerminalId = @TerminalId";
         
@@ -21,13 +21,13 @@ namespace SmsSync.Services
         {
         }
         
-        public async Task<Job> GetJobById(int jobId, int terminalId)
+        public async Task<DbJob> GetJobById(int jobId, int terminalId)
         {
             using (var connection = CreateConnection())
             {
-                return await connection.QuerySingleOrDefaultAsync<Job>(GetJobQuery,
+                return await connection.QuerySingleAsync<DbJob>(GetJobQuery,
                     new {JobId = jobId, TerminalId = terminalId},
-                    commandTimeout: Timeout);
+                    commandTimeout: CommandTimeout);
             }
         }
     }

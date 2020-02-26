@@ -1,7 +1,4 @@
-﻿using System;
-using System.Data;
-using System.Data.SqlClient;
-using System.Linq;
+﻿using System.Linq;
 using System.Threading.Tasks;
 using Dapper;
 using SmsSync.Configuration;
@@ -30,7 +27,8 @@ namespace SmsSync.Services
         private const string UpdateQuery = @"
                     UPDATE dbo.SmsEvents
                         SET State = @State, LastUpdateTime = CURRENT_TIMESTAMP
-                        WHERE OrderId = @OrderId AND TerminalId = @TerminalId AND State = @CurrentState";
+                        WHERE OrderId = @OrderId AND TerminalId = @TerminalId AND State = @CurrentState
+                            AND SetTime = @SetTime AND LastUpdateTime = @LastUpdateTime";
 
         private readonly string[] _statesToSelect = {NewState};
 
@@ -45,7 +43,7 @@ namespace SmsSync.Services
             {
                 var sms = await connection.QueryAsync<DbSms>(ReadQuery,
                     new {States = _statesToSelect},
-                    commandTimeout: Timeout);
+                    commandTimeout: CommandTimeout);
 
                 return sms.ToArray();
             }
@@ -58,8 +56,12 @@ namespace SmsSync.Services
                 foreach (var message in messages)
                 {
                     await connection.ExecuteAsync(UpdateQuery,
-                        new {message.OrderId, message.TerminalId, State = SentState, CurrentState = message.State},
-                        commandTimeout: Timeout);
+                        new
+                        {
+                            message.OrderId, message.TerminalId, State = SentState, CurrentState = message.State,
+                            message.LastUpdateTime, message.SetTime
+                        },
+                        commandTimeout: CommandTimeout);
                 }
             }
         }
@@ -71,8 +73,12 @@ namespace SmsSync.Services
                 foreach (var message in messages)
                 {
                     await connection.ExecuteAsync(UpdateQuery,
-                        new {message.OrderId, message.TerminalId, State = FailState, CurrentState = message.State},
-                        commandTimeout: Timeout);
+                        new
+                        {
+                            message.OrderId, message.TerminalId, State = FailState, CurrentState = message.State,
+                            message.LastUpdateTime, message.SetTime
+                        },
+                        commandTimeout: CommandTimeout);
                 }
             }
         }

@@ -51,6 +51,7 @@ namespace SmsSync
             
             services.AddTransient<IInboxRepository, InboxRepository>();
             services.AddTransient<IJobsRepository, JobsRepository>();
+            services.AddTransient<IResourceRepository, ResourceRepository>();
 
             services.AddSingleton<IOutboxManager, OutboxManager>();
             services.AddSingleton<IMessageBuilder, MessageBuilder>();

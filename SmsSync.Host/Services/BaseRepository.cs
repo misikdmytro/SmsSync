@@ -8,9 +8,9 @@ namespace SmsSync.Services
     {
         private readonly DatabaseConfiguration _database;
 
-        protected int Timeout => _database.Timeout;
+        protected int CommandTimeout => _database.Timeout;
 
-        public BaseRepository(DatabaseConfiguration database)
+        protected BaseRepository(DatabaseConfiguration database)
         {
             _database = database;
         }

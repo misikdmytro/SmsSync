@@ -20,26 +20,33 @@ namespace SmsSync.Services
         
         private readonly ResourcesConfiguration _configuration;
         private readonly IJobsRepository _jobsRepository;
+        private readonly IResourceRepository _resourceRepository;
 
-        public MessageBuilder(ResourcesConfiguration configuration, IJobsRepository jobsRepository)
+        public MessageBuilder(ResourcesConfiguration configuration, IJobsRepository jobsRepository, IResourceRepository resourceRepository)
         {
             _converters =
                 new Dictionary<string, Func<DbSms, Task<string>>>
                 {
                     [Constants.Resources.TicketIdPlaceholder] = sms => Task.FromResult(sms.OrderId.ToString()),
-                    [Constants.Resources.PlaceIdPlaceholder] = sms => Task.FromResult("PLACEID"),
+                    [Constants.Resources.PlaceIdPlaceholder] = sms => GetPlaceId(sms.ResourceId, sms.TerminalId),
                     [Constants.Resources.ServiceIdPlaceholder] = sms => GetJobDescription(sms.JobId, sms.TerminalId, sms.LanguageId)
                 };
             
             _configuration = configuration;
             _jobsRepository = jobsRepository;
+            _resourceRepository = resourceRepository;
         }
 
         public async Task<Message> Build(DbSms sms)
         {
-            if (_configuration.Messages.TryGetValue(sms.JobDescription, out var resource) &&
+            // 1. Whether 'Registration' or 'Invitation'
+            var messageType = GetMessageType(sms);
+            
+            // 2. Get message format
+            if (_configuration.Messages.TryGetValue(messageType, out var resource) &&
                 resource.TryGetValue(sms.LanguageId.ToString("D"), out var messageContent))
             {
+                // 3. Replace placeholders with real values
                 var content = await BuildContent(sms, messageContent);
                 
                 var message = new Message
@@ -74,6 +81,13 @@ namespace SmsSync.Services
             return content;
         }
 
+        private string GetMessageType(DbSms sms)
+        {
+            return sms.ResourceId == -1
+                ? Constants.Resources.Types.Registration
+                : Constants.Resources.Types.Invitation;
+        }
+        
         private async Task<string> GetJobDescription(int jobId, int terminalId, Language languageId)
         {
             var job = await _jobsRepository.GetJobById(jobId, terminalId);
@@ -81,20 +95,22 @@ namespace SmsSync.Services
             switch (languageId)
             {
                 case Language.Default:
-                    // default 
                     return job.DescriptionUa;
                 case Language.Russian:
-                    // russian
                     return job.DescriptionRu;
                 case Language.Ukrainian:
-                    // ukrainian
                     return job.DescriptionUa;
                 case Language.English:
-                    // english
                     return job.DescriptionEn;
                 default:
                     throw new ArgumentOutOfRangeException($"Unknown language {languageId}", nameof(languageId));
             }
+        }
+
+        private async Task<string> GetPlaceId(int resourceId, int terminalId)
+        {
+            var resource = await _resourceRepository.GetResource(resourceId, terminalId);
+            return resource.PlaceId.ToString();
         }
     }
 }

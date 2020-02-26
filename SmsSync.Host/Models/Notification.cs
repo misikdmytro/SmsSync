@@ -18,14 +18,12 @@ namespace SmsSync.Models
             return new OutboxNotification(this);
         }
 
-
         private bool Equals(Notification other)
         {
-            return Sms.LanguageId == other.Sms.LanguageId && Sms.OrderId == other.Sms.OrderId &&
-                   Sms.TerminalId == other.Sms.TerminalId && Sms.JobId == other.Sms.JobId
-                   && Sms.ClientPhone == other.Sms.ClientPhone && Sms.SetTime.Equals(other.Sms.SetTime) 
-                   && Sms.LastUpdateTime.Equals(other.Sms.LastUpdateTime) && Sms.State == other.Sms.State 
-                   && Sms.JobDescription.Equals(other.Sms.JobDescription);
+            return Sms.LanguageId == other.Sms.LanguageId && Sms.OrderId == other.Sms.OrderId && Sms.TerminalId == other.Sms.TerminalId &&
+                   Sms.ResourceId == other.Sms.ResourceId && Sms.JobId == other.Sms.JobId && Sms.ClientPhone == other.Sms.ClientPhone &&
+                   Sms.SetTime.Equals(other.Sms.SetTime) && Sms.LastUpdateTime.Equals(other.Sms.LastUpdateTime) &&
+                   Sms.State == other.Sms.State;
         }
 
         public override bool Equals(object obj)
@@ -33,8 +31,7 @@ namespace SmsSync.Models
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
             if (obj.GetType() != this.GetType()) return false;
-            var notification = (Notification) obj;
-            return Equals(notification);
+            return Equals((Notification) obj);
         }
 
         public override int GetHashCode()
@@ -43,12 +40,12 @@ namespace SmsSync.Models
             hashCode.Add((int) Sms.LanguageId);
             hashCode.Add(Sms.OrderId);
             hashCode.Add(Sms.TerminalId);
+            hashCode.Add(Sms.ResourceId);
             hashCode.Add(Sms.JobId);
             hashCode.Add(Sms.ClientPhone);
             hashCode.Add(Sms.SetTime);
             hashCode.Add(Sms.LastUpdateTime);
             hashCode.Add(Sms.State);
-            hashCode.Add(Sms.JobDescription);
             return hashCode.ToHashCode();
         }
     }
@@ -70,7 +67,6 @@ namespace SmsSync.Models
         }
 
         public Notification Notification { get; }
-
         public NotificationState State { get; private set; }
 
         private int _rollbackTimes;

@@ -49,11 +49,6 @@ namespace SmsSync.Services
 
         public Notification Next(OutboxNotification.NotificationState state)
         {
-            if (!state.IsTemporary())
-            {
-                throw new ArgumentException($"State should be temp but was {state}");
-            }
-            
             lock (_lock)
             {
                 return NextNoLock(state);
@@ -78,16 +73,18 @@ namespace SmsSync.Services
 
         private Notification NextNoLock(OutboxNotification.NotificationState state)
         {
+            if (!state.IsTemporary())
+            {
+                throw new ArgumentException($"State should be temp but was {state}");
+            }
+            
             var value = _notifications.FirstOrDefault(m => m.State == state);
             if (value == null)
             {
                 return null;
             }
 
-            if (value.State.IsTemporary())
-            {
-                PromoteNoLock(value.Notification);
-            }
+            PromoteNoLock(value.Notification);
 
             return value.Notification;
         }

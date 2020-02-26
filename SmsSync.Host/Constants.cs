@@ -12,8 +12,12 @@
 
         public static class Resources
         {
-            public const string ResourceName = "MessageContent";
-
+            public static class Types
+            {
+                public const string Registration = "Registration";
+                public const string Invitation = "Invitation";
+            }
+            
             public const string PlaceIdPlaceholder = "<PlaceId>";
             public const string ServiceIdPlaceholder = "<ServiceId>";
             public const string TicketIdPlaceholder = "<TicketId>";

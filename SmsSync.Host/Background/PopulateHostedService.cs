@@ -114,7 +114,7 @@ namespace SmsSync.Background
             _commitor.Stop();
             _failer.Stop();
             
-            _logger.Information("DB timers stoped");
+            _logger.Information("DB timers stopped");
             
             return Task.CompletedTask;
         }

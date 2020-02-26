@@ -51,8 +51,11 @@ namespace SmsSync.Services
                         cancellationToken);
 
                     if (!response.IsSuccessStatusCode)
+                    {
+                        var content = await response.Content.ReadAsStringAsync();
                         throw new InvalidOperationException(
-                            $"External service returned {response.StatusCode} status code");
+                            $"External service returned {response.StatusCode} status code. Content {content}");
+                    }
                 });
         }
 

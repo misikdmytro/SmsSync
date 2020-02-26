@@ -2,7 +2,6 @@
 {
     public class DbResource
     {
-        public int ResourceId { get; set; }
-        public int TerminalId { get; set; }
+        public int PlaceId { get; set; }
     }
 }
