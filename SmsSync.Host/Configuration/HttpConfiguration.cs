@@ -9,5 +9,6 @@ namespace SmsSync.Configuration
         public string TokenValue { get; set; }
         public TimeSpan Timeout { get; set; }
         public int Retry { get; set; }
+        public TimeSpan RetryInterval { get; set; }
     }
 }

@@ -16,16 +16,17 @@ namespace SmsSync.Background
         private readonly ILogger _logger = Log.ForContext<SyncHostedService>();
         
         private readonly IOutboxManager _outboxManager;
-        private readonly IMessageService _messageService;
         private readonly IMessageBuilder _messageBuilder;
+        private readonly HttpConfiguration _httpConfiguration;
         
         private readonly IList<BaclgroundTimer> _timers;
 
-        public SyncHostedService(BackgroundConfiguration backgroundConfiguration, IOutboxManager outboxManager, 
-            IMessageService messageService, IMessageBuilder messageBuilder)
+        public SyncHostedService(BackgroundConfiguration backgroundConfiguration, HttpConfiguration httpConfiguration, 
+            IOutboxManager outboxManager, 
+            IMessageBuilder messageBuilder)
         {
             _outboxManager = outboxManager;
-            _messageService = messageService;
+            _httpConfiguration = httpConfiguration;
             _messageBuilder = messageBuilder;
 
             _timers = Enumerable.Range(0, backgroundConfiguration.WorkersCount)
@@ -41,25 +42,28 @@ namespace SmsSync.Background
             {
                 timer.Start(async (sender, args) =>
                 {
-                    // 1. Take message
-                    Notification notification;
-                    while ((notification = _outboxManager.Next(OutboxNotification.NotificationState.New)) != null)
+                    using (var messageService = new MessageHttpHttpService(_httpConfiguration))
                     {
-                        try
+                        // 1. Take message
+                        Notification notification;
+                        while ((notification = _outboxManager.Next(OutboxNotification.NotificationState.New)) != null)
                         {
-                            // 2. Build message
-                            var message = await _messageBuilder.Build(notification.Sms);
-                        
-                            // 3. Send using HTTP
-                            await _messageService.SendSms(message, CancellationToken.None);
-                            
-                            // 4. Mark as sent
-                            _outboxManager.Promote(notification);
-                        }
-                        catch (Exception e)
-                        {
-                            _outboxManager.Rollback(notification);
-                            _logger.Error(e, "Error during send message");
+                            try
+                            {
+                                // 2. Build message
+                                var message = await _messageBuilder.Build(notification.Sms);
+
+                                // 3. Send using HTTP
+                                await messageService.SendSms(message, CancellationToken.None);
+
+                                // 4. Mark as sent
+                                _outboxManager.Promote(notification);
+                            }
+                            catch (Exception e)
+                            {
+                                _outboxManager.Rollback(notification);
+                                _logger.Error(e, "Error during send message");
+                            }
                         }
                     }
                 });

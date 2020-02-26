@@ -8,5 +8,6 @@ namespace SmsSync.Configuration
         public TimeSpan ReadInterval { get; set; }
         public TimeSpan CommitInterval { get; set; }
         public TimeSpan SyncInterval { get; set; }
+        public TimeSpan FailInterval { get; set; }
     }
 }

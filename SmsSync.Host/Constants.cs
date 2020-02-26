@@ -25,7 +25,7 @@
 
         public static class Limits
         {
-            public const int MaxRollbackTimes = 5;
+            public const int MaxRollbackTimes = 8;
         }
     }
 }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Net.Http;
 using System.Net.Http.Formatting;
 using System.Net.Http.Headers;
@@ -11,19 +12,20 @@ using SmsSync.Models;
 
 namespace SmsSync.Services
 {
-    public interface IMessageService : IDisposable
+    public interface IMessageHttpService : IDisposable
     {
         Task SendSms(Message message, CancellationToken cancellationToken);
     }
     
-    public class MessageService : IMessageService
+    public class MessageHttpHttpService : IMessageHttpService
     {
-        private readonly ILogger _logger = Log.ForContext<MessageService>();
+        private readonly ILogger _logger = Log.ForContext<MessageHttpHttpService>();
 
         private readonly HttpClient _httpClient;
         private readonly int _retryCount;
+        private readonly TimeSpan _retryInterval;
 
-        public MessageService(HttpConfiguration configuration)
+        public MessageHttpHttpService(HttpConfiguration configuration)
         {
             _httpClient = new HttpClient
             {
@@ -36,20 +38,29 @@ namespace SmsSync.Services
             };
 
             _retryCount = configuration.Retry;
+            _retryInterval = configuration.RetryInterval;
         }
 
         public Task SendSms(Message message, CancellationToken cancellationToken)
         {
             return Policy
                 .Handle<InvalidOperationException>()
-                .RetryAsync(_retryCount, (exception, i) => _logger.Warning(exception, "Retry http call"))
+                .WaitAndRetryAsync(_retryCount, 
+                    i => _retryInterval,
+                    (exception, ts, i, context) =>
+                    {
+                        if (i < _retryCount)
+                        {
+                            _logger.Warning(exception, "Retry http call");
+                        }
+                    })
                 .ExecuteAsync(async () =>
                 {
-                    var response = await _httpClient.PostAsync($"api/contents",
+                    var response = await _httpClient.PostAsync("api/contents",
                         new ObjectContent<Message>(message, new JsonMediaTypeFormatter(), 
                             System.Net.Mime.MediaTypeNames.Application.Json),
                         cancellationToken);
-
+                    
                     if (!response.IsSuccessStatusCode)
                     {
                         var content = await response.Content.ReadAsStringAsync();

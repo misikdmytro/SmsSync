@@ -32,7 +32,7 @@ namespace SmsSync.Background
 
             _populator = new BaclgroundTimer(backgroundConfiguration.ReadInterval);
             _commitor = new BaclgroundTimer(backgroundConfiguration.CommitInterval);
-            _failer = new BaclgroundTimer(TimeSpan.FromSeconds(10));
+            _failer = new BaclgroundTimer(backgroundConfiguration.FailInterval);
         }
 
         public Task StartAsync(CancellationToken cancellationToken)
