@@ -22,10 +22,5 @@
             public const string ServiceIdPlaceholder = "<ServiceId>";
             public const string TicketIdPlaceholder = "<TicketId>";
         }
-
-        public static class Limits
-        {
-            public const int MaxRollbackTimes = 8;
-        }
     }
 }

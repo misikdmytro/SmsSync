@@ -69,8 +69,6 @@ namespace SmsSync.Models
         public Notification Notification { get; }
         public NotificationState State { get; private set; }
 
-        private int _rollbackTimes;
-
         public OutboxNotification(Notification notification)
         {
             Notification = notification;
@@ -94,9 +92,7 @@ namespace SmsSync.Models
         {
             var oldState = State;
 
-            State = ++_rollbackTimes > Constants.Limits.MaxRollbackTimes 
-                ? NotificationState.Failed 
-                : State.Rollback();
+            State = State.Rollback();
 
             return (oldState, State);
         }

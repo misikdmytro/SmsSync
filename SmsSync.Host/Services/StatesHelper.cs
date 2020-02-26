@@ -24,7 +24,7 @@ namespace SmsSync.Services
             new Dictionary<State, State>
             {
                 [State.New] = State.New,
-                [State.WaitForSend] = State.New,
+                [State.WaitForSend] = State.Failed,
                 [State.Sent] = State.Sent,
                 [State.WaitForCommit] = State.Sent,
                 [State.Committed] = State.Committed,
