@@ -6,9 +6,6 @@ namespace SmsSync.Models
     public class Notification
     {
         public DbSms Sms { get; }
-        
-        public long TicketNumber => Sms.OrderId;
-        public string PhoneNumber => Sms.ClientPhone;
 
         public Notification(DbSms sms)
         {
@@ -24,8 +21,10 @@ namespace SmsSync.Models
         {
             if (obj != null && obj is Notification notification)
             {
-                return TicketNumber.Equals(notification.TicketNumber)
-                       && PhoneNumber.Equals(notification.PhoneNumber);
+                return Sms.LanguageId.Equals(notification.Sms.LanguageId)
+                    && Sms.OrderId.Equals(notification.Sms.OrderId)
+                    && Sms.TerminalId.Equals(notification.Sms.TerminalId)
+                    && Sms.ClientPhone.Equals(notification.Sms.ClientPhone);
             }
 
             return false;
@@ -33,7 +32,10 @@ namespace SmsSync.Models
 
         public override int GetHashCode()
         {
-            return TicketNumber.GetHashCode() ^ PhoneNumber.GetHashCode();
+            return Sms.LanguageId.GetHashCode() 
+                   ^ Sms.OrderId.GetHashCode()
+                   ^ Sms.TerminalId.GetHashCode()
+                   ^ Sms.ClientPhone.GetHashCode();
         }
     }
 

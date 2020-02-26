@@ -15,6 +15,8 @@ namespace SmsSync.Services
         Task Commit(DbSms[] messages);
     }
 
+    #region Fake
+
     public class FakeInboxRepository : IInboxRepository
     {
         public Task<DbSms[]> ReadAsync()
@@ -37,10 +39,17 @@ namespace SmsSync.Services
             return Task.CompletedTask;
         }
     }
-    
+
+    #endregion
+
+    #region Real
+
     public class InboxRepository : IInboxRepository
     {
-        private DatabaseConfiguration _database;
+        private const string NewState = "NEW"; 
+        private const string SentState = "SENT"; 
+        
+        private readonly DatabaseConfiguration _database;
 
         public InboxRepository(DatabaseConfiguration database)
         {
@@ -52,11 +61,12 @@ namespace SmsSync.Services
             using (var connection = CreateConnection())
             {
                 const string query = @"""
-                    SELECT LanguageId, OrderId, ClientPhone, TerminalId
+                    SELECT LanguageId, OrderId, ClientPhone, TerminalId, SetTime, LastUpdateTime, State
                         FROM dbo.SmsEvents
-                        WHERE State = 'NEW'""";
+                        WHERE State = @State""";
                 
                 var sms = await connection.QueryAsync<DbSms>(query,
+                    new {State = NewState},
                     commandTimeout:_database.Timeout);
 
                 return sms.ToArray();
@@ -71,10 +81,11 @@ namespace SmsSync.Services
                 {
                     const string query = @"""
                     UPDATE dbo.SmsEvents
-                        SET State = 'SENT'
+                        SET State = @State, LastUpdateTime = CURRENT_TIMESTAMP
                         WHERE OrderId = @OrderId AND TerminalId = @TerminalId""";
 
-                    await connection.ExecuteAsync(query, new {message.OrderId, message.TerminalId},
+                    await connection.ExecuteAsync(query, 
+                        new {message.OrderId, message.TerminalId, State = SentState},
                         commandTimeout:_database.Timeout);
                 }
             }
@@ -85,4 +96,6 @@ namespace SmsSync.Services
             return new SqlConnection(_database.ConnectionString);
         }
     }
+
+    #endregion
 }

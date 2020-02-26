@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using AutoMapper;
 using Microsoft.Extensions.Hosting;
 using Serilog;
 using SmsSync.Configuration;
@@ -16,19 +15,19 @@ namespace SmsSync.Background
     {
         private readonly ILogger _logger = Log.ForContext<SyncHostedService>();
         
-        private readonly IMapper _mapper;
-
         private readonly IOutboxManager _outboxManager;
         private readonly IMessageService _messageService;
+        private readonly IMessageBuilder _messageBuilder;
         
         private readonly IList<BaclgroundTimer> _timers;
 
-        public SyncHostedService(BackgroundConfiguration backgroundConfiguration, IMapper mapper, IOutboxManager outboxManager, IMessageService messageService)
+        public SyncHostedService(BackgroundConfiguration backgroundConfiguration, IOutboxManager outboxManager, 
+            IMessageService messageService, IMessageBuilder messageBuilder)
         {
-            _mapper = mapper;
             _outboxManager = outboxManager;
             _messageService = messageService;
-            
+            _messageBuilder = messageBuilder;
+
             _timers = Enumerable.Range(0, backgroundConfiguration.WorkersCount)
                 .Select(x => new BaclgroundTimer(backgroundConfiguration.SyncInterval))
                 .ToList();
@@ -48,8 +47,8 @@ namespace SmsSync.Background
                     {
                         try
                         {
-                            // 2. Map to HTTP contracts
-                            var message = _mapper.Map<Message>(notification);
+                            // 2. Build message
+                            var message = _messageBuilder.Build(notification.Sms);
                         
                             // 3. Send using HTTP
                             await _messageService.SendSms(message, CancellationToken.None);

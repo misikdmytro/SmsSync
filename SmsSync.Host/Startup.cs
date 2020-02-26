@@ -1,4 +1,3 @@
-using AutoMapper;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
@@ -6,7 +5,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SmsSync.Background;
 using SmsSync.Configuration;
-using SmsSync.Mapper;
 using SmsSync.Services;
 
 namespace SmsSync
@@ -40,6 +38,7 @@ namespace SmsSync
             services.AddSingleton(configuration.Background);
             services.AddSingleton(configuration.Http);
             services.AddSingleton(configuration.Database);
+            services.AddSingleton(configuration.Resources);
 
             if (_environment.IsDevelopment())
             {
@@ -54,12 +53,8 @@ namespace SmsSync
             }
             
             services.AddSingleton<IOutboxManager, OutboxManager>();
-            
-            var mapper = new MapperConfiguration(config => config.AddProfile<MessageProfile>())
-                .CreateMapper();
+            services.AddSingleton<IMessageBuilder, MessageBuilder>();
 
-            services.AddSingleton(mapper);
-            
             services.AddHostedService<PopulateHostedService>();
             services.AddHostedService<SyncHostedService>();
         }
