@@ -9,8 +9,8 @@ namespace SmsSync.Services
     public interface IInboxRepository
     {
         Task<DbSms[]> ReadAsync();
-        Task Commit(params DbSms[] messages);
-        Task Fail(params DbSms[] messages);
+        Task Commit(DbSms message);
+        Task Fail(DbSms message);
     }
 
     public class InboxRepository : BaseRepository, IInboxRepository
@@ -23,7 +23,7 @@ namespace SmsSync.Services
                     SELECT *
                         FROM dbo.SmsEvents
                         WHERE State IN (@States)";
-        
+
         private const string UpdateQuery = @"
                     UPDATE dbo.SmsEvents
                         SET State = @State, LastUpdateTime = CURRENT_TIMESTAMP
@@ -33,7 +33,7 @@ namespace SmsSync.Services
         private readonly string[] _statesToSelect = {NewState};
 
         public InboxRepository(DatabaseConfiguration database)
-            :base(database)
+            : base(database)
         {
         }
 
@@ -49,37 +49,31 @@ namespace SmsSync.Services
             }
         }
 
-        public async Task Commit(DbSms[] messages)
+        public async Task Commit(DbSms message)
         {
             using (var connection = CreateConnection())
             {
-                foreach (var message in messages)
-                {
-                    await connection.ExecuteAsync(UpdateQuery,
-                        new
-                        {
-                            message.OrderId, message.TerminalId, State = SentState, CurrentState = message.State,
-                            message.LastUpdateTime, message.SetTime
-                        },
-                        commandTimeout: CommandTimeout);
-                }
+                await connection.ExecuteAsync(UpdateQuery,
+                    new
+                    {
+                        message.OrderId, message.TerminalId, State = SentState, CurrentState = message.State,
+                        message.LastUpdateTime, message.SetTime
+                    },
+                    commandTimeout: CommandTimeout);
             }
         }
 
-        public async Task Fail(DbSms[] messages)
+        public async Task Fail(DbSms message)
         {
             using (var connection = CreateConnection())
             {
-                foreach (var message in messages)
-                {
-                    await connection.ExecuteAsync(UpdateQuery,
-                        new
-                        {
-                            message.OrderId, message.TerminalId, State = FailState, CurrentState = message.State,
-                            message.LastUpdateTime, message.SetTime
-                        },
-                        commandTimeout: CommandTimeout);
-                }
+                await connection.ExecuteAsync(UpdateQuery,
+                    new
+                    {
+                        message.OrderId, message.TerminalId, State = FailState, CurrentState = message.State,
+                        message.LastUpdateTime, message.SetTime
+                    },
+                    commandTimeout: CommandTimeout);
             }
         }
     }
