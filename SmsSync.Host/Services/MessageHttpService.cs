@@ -14,7 +14,7 @@ namespace SmsSync.Services
 {
     public interface IMessageHttpService : IDisposable
     {
-        Task SendSms(Message message, CancellationToken cancellationToken);
+        Task SendSms(Message message, CancellationToken cancellationToken = default);
     }
     
     public class MessageHttpService : IMessageHttpService
@@ -41,7 +41,7 @@ namespace SmsSync.Services
             _retryInterval = configuration.RetryInterval;
         }
 
-        public Task SendSms(Message message, CancellationToken cancellationToken)
+        public Task SendSms(Message message, CancellationToken cancellationToken = default)
         {
             return Policy
                 .Handle<InvalidOperationException>()

@@ -42,21 +42,31 @@ namespace SmsSync
             var configuration = Configuration.GetSection("ServiceConfig").Get<AppConfiguration>();
 
             services.AddSingleton(configuration);
-            services.AddSingleton(configuration.Background);
             services.AddSingleton(configuration.Http);
             services.AddSingleton(configuration.Database);
             services.AddSingleton(configuration.Resources);
+            
+            services.AddTransient<SendSmsHandler>();
+            services.AddTransient<CommitSmsHandler>();
+            services.AddTransient<FailSmsHandler>();
 
+            services.AddTransient<IChainSmsHandler>(sp =>
+            {
+                var commitChain = new ChainSmsHandler(sp.GetRequiredService<CommitSmsHandler>(), null, null);
+                var failChain = new ChainSmsHandler(sp.GetRequiredService<FailSmsHandler>(), null, null);
+                var sendChain = new ChainSmsHandler(sp.GetRequiredService<SendSmsHandler>(), commitChain, failChain);
+
+                return sendChain;
+            });
+            
             services.AddTransient<IMessageHttpService, MessageHttpService>();
             
             services.AddTransient<IInboxRepository, InboxRepository>();
             services.AddTransient<IJobsRepository, JobsRepository>();
             services.AddTransient<IResourceRepository, ResourceRepository>();
 
-            services.AddSingleton<IOutboxManager, OutboxManager>();
             services.AddSingleton<IMessageBuilder, MessageBuilder>();
 
-            services.AddHostedService<PopulateHostedService>();
             services.AddHostedService<SyncHostedService>();
 
             _logger.Information("Services configured.");

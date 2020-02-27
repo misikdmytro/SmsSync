@@ -6,86 +6,60 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
 using Serilog;
 using SmsSync.Configuration;
+using SmsSync.Equality;
 using SmsSync.Models;
 using SmsSync.Services;
 
 namespace SmsSync.Background
 {
-    public class SyncHostedService : IHostedService
+    public class SyncHostedService : BackgroundService
     {
         private readonly ILogger _logger = Log.ForContext<SyncHostedService>();
-        
-        private readonly IOutboxManager _outboxManager;
-        private readonly IMessageBuilder _messageBuilder;
-        private readonly HttpConfiguration _httpConfiguration;
-        
-        private readonly IList<BaclgroundTimer> _timers;
 
-        public SyncHostedService(BackgroundConfiguration backgroundConfiguration, HttpConfiguration httpConfiguration, 
-            IOutboxManager outboxManager, 
-            IMessageBuilder messageBuilder)
+        private readonly IInboxRepository _inboxRepository;
+        private readonly IChainSmsHandler _chainSmsHandler;
+        private readonly HashSet<DbSms> _hashSet;
+
+        public SyncHostedService(IChainSmsHandler chainSmsHandler,
+            IInboxRepository inboxRepository)
         {
-            _outboxManager = outboxManager;
-            _httpConfiguration = httpConfiguration;
-            _messageBuilder = messageBuilder;
-
-            _timers = Enumerable.Range(0, backgroundConfiguration.WorkersCount)
-                .Select(x => new BaclgroundTimer(backgroundConfiguration.SyncInterval))
-                .ToList();
+            _chainSmsHandler = chainSmsHandler;
+            _inboxRepository = inboxRepository;
+            _hashSet = new HashSet<DbSms>(new SmsEqualityComparer());
         }
 
-        public Task StartAsync(CancellationToken cancellationToken)
+        protected override async Task ExecuteAsync(CancellationToken cancellationToken)
         {
-            _logger.Information("Start main threads...");
+            _logger.Information("Start main threads.");
+            
+            var tasks = new List<Task>();
 
-            foreach (var timer in _timers)
+            while (!cancellationToken.IsCancellationRequested)
             {
-                timer.Start(async (sender, args) =>
+                var messages = await _inboxRepository.ReadAsync();
+            
+                foreach (var sms in messages)
                 {
-                    using (var messageService = new MessageHttpService(_httpConfiguration))
+                    if (_hashSet.Add(sms))
                     {
-                        // 1. Take message
-                        Notification notification;
-                        while ((notification = _outboxManager.Next(OutboxNotification.NotificationState.New)) != null)
+                        var task = Task.Run(() => _chainSmsHandler.HandleAsync(sms, cancellationToken),
+                            cancellationToken).ContinueWith(t =>
                         {
-                            try
+                            if (t.IsCompletedSuccessfully)
                             {
-                                // 2. Build message
-                                var message = await _messageBuilder.Build(notification.Sms);
-
-                                // 3. Send using HTTP
-                                await messageService.SendSms(message, CancellationToken.None);
-
-                                // 4. Mark as sent
-                                _outboxManager.Promote(notification);
+                                _logger.Debug("Remove sms {@Sms} from set", sms);
+                                _hashSet.Remove(sms);
                             }
-                            catch (Exception e)
-                            {
-                                _outboxManager.Rollback(notification);
-                                _logger.Error(e, "Error during send message");
-                            }
-                        }
+                        }, cancellationToken);
+                            
+                        tasks.Add(task);
                     }
-                });
+                }
+
+                await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
             }
             
-            _logger.Information("Main threads started");
-
-            return Task.CompletedTask;
-        }
-
-        public Task StopAsync(CancellationToken cancellationToken)
-        {
-            _logger.Information("Stop main threads...");
-
-            foreach (var timer in _timers)
-            {
-                timer.Stop();
-            }
-            
-            _logger.Information("Main threads stopped");
-            
-            return Task.CompletedTask;
+            await Task.WhenAll(tasks);
         }
     }
 }

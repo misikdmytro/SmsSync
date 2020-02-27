@@ -9,8 +9,8 @@ namespace SmsSync.Services
     public interface IInboxRepository
     {
         Task<DbSms[]> ReadAsync();
-        Task Commit(DbSms[] messages);
-        Task Fail(DbSms[] messages);
+        Task Commit(params DbSms[] messages);
+        Task Fail(params DbSms[] messages);
     }
 
     public class InboxRepository : BaseRepository, IInboxRepository

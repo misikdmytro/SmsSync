@@ -1,7 +1,5 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SmsSync.Tests", "SmsSync.Tests\SmsSync.Tests.csproj", "{5A7CCCDD-C413-46FA-9AD0-EB5CBEB2BFFC}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SmsSync.Host", "SmsSync.Host\SmsSync.Host.csproj", "{C2C997F2-52A3-44F0-99B6-CFDBD25E33AE}"
 EndProject
 Global
@@ -10,10 +8,6 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{5A7CCCDD-C413-46FA-9AD0-EB5CBEB2BFFC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{5A7CCCDD-C413-46FA-9AD0-EB5CBEB2BFFC}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{5A7CCCDD-C413-46FA-9AD0-EB5CBEB2BFFC}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{5A7CCCDD-C413-46FA-9AD0-EB5CBEB2BFFC}.Release|Any CPU.Build.0 = Release|Any CPU
 		{C2C997F2-52A3-44F0-99B6-CFDBD25E33AE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{C2C997F2-52A3-44F0-99B6-CFDBD25E33AE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C2C997F2-52A3-44F0-99B6-CFDBD25E33AE}.Release|Any CPU.ActiveCfg = Release|Any CPU
