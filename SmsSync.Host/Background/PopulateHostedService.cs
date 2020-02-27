@@ -58,7 +58,7 @@ namespace SmsSync.Background
                 catch (Exception e)
                 {
                     _outboxManager.Rollback(notificationsToCommit);
-                    _logger.Error(e, "Error during send message");
+                    _logger.Error(e, "Error during commit message");
                 }
             });
             
@@ -97,7 +97,7 @@ namespace SmsSync.Background
                 catch (Exception e)
                 {
                     _outboxManager.Rollback(notificationsToCommit);
-                    _logger.Error(e, "Error during send message");
+                    _logger.Error(e, "Error during failing message");
                 }
             });
             

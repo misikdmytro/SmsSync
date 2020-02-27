@@ -18,10 +18,13 @@ namespace SmsSync.Models
             return new OutboxNotification(this);
         }
 
-        private bool Equals(Notification other)
+
+        protected bool Equals(Notification other)
         {
-            return Sms.LanguageId == other.Sms.LanguageId && Sms.OrderId == other.Sms.OrderId && Sms.TerminalId == other.Sms.TerminalId &&
-                   Sms.ResourceId == other.Sms.ResourceId && Sms.JobId == other.Sms.JobId && Sms.ClientPhone == other.Sms.ClientPhone &&
+            return Sms.LanguageId == other.Sms.LanguageId && Sms.OrderId == other.Sms.OrderId &&
+                   Sms.TerminalId == other.Sms.TerminalId &&
+                   Sms.ResourceId == other.Sms.ResourceId && Sms.JobId == other.Sms.JobId &&
+                   Sms.ClientPhone == other.Sms.ClientPhone &&
                    Sms.SetTime.Equals(other.Sms.SetTime) && Sms.LastUpdateTime.Equals(other.Sms.LastUpdateTime) &&
                    Sms.State == other.Sms.State;
         }
@@ -54,19 +57,20 @@ namespace SmsSync.Models
     {
         public enum NotificationState
         {
-            [TemporaryState] New,
+            [Available] New,
             WaitForSend,
-            [TemporaryState] Sent,
+            [Available] Sent,
             WaitForCommit,
-            [TemporaryState] Committed,
+            [Available] Committed,
             WaitForRemove,
-            [TemporaryState] Failed,
+            [Available] Failed,
             WaitForMark,
-            [TemporaryState] Marked,
+            [Available] Marked,
             WaitForRemoveFail
         }
 
         public Notification Notification { get; }
+
         public NotificationState State { get; private set; }
 
         public OutboxNotification(Notification notification)

@@ -42,7 +42,7 @@ namespace SmsSync.Background
             {
                 timer.Start(async (sender, args) =>
                 {
-                    using (var messageService = new MessageHttpHttpService(_httpConfiguration))
+                    using (var messageService = new MessageHttpService(_httpConfiguration))
                     {
                         // 1. Take message
                         Notification notification;

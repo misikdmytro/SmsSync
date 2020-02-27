@@ -47,7 +47,7 @@ namespace SmsSync
             services.AddSingleton(configuration.Database);
             services.AddSingleton(configuration.Resources);
 
-            services.AddTransient<IMessageHttpService, MessageHttpHttpService>();
+            services.AddTransient<IMessageHttpService, MessageHttpService>();
             
             services.AddTransient<IInboxRepository, InboxRepository>();
             services.AddTransient<IJobsRepository, JobsRepository>();

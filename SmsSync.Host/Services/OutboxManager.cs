@@ -37,12 +37,13 @@ namespace SmsSync.Services
 
         public void Populate(Notification[] notifications)
         {
+            _logger.Information("Populate queue with {N} messages", notifications.Length);
             lock (_lock)
             {
-                var added = notifications.Count(message => _notifications.Add(message.PrepareForSending()));
-
-                _logger.Debug("Queue populated with {n}/{N} messages", added,
-                    notifications.Length);
+                foreach (var message in notifications)
+                {
+                    _notifications.Add(message.PrepareForSending());
+                }
             }
         }
 
@@ -59,7 +60,7 @@ namespace SmsSync.Services
             lock (_lock)
             {
                 var result = new List<Notification>();
-
+                
                 Notification notification;
                 while ((notification = NextNoLock(state)) != null)
                 {
@@ -72,11 +73,11 @@ namespace SmsSync.Services
 
         private Notification NextNoLock(OutboxNotification.NotificationState state)
         {
-            if (!state.IsTemporary())
+            if (!state.IsAvailable())
             {
-                throw new ArgumentException($"State should be temp but was {state}");
+                throw new ArgumentException($"State should be available but was {state}");
             }
-
+            
             var value = _notifications.FirstOrDefault(m => m.State == state);
             if (value == null)
             {
@@ -113,8 +114,7 @@ namespace SmsSync.Services
             if (value != null)
             {
                 var (oldState, newState) = value.Promote();
-                _logger.Information("Notification {@Notification} promote from {From} to {To}", value, oldState,
-                    newState);
+                _logger.Information("Notification {@Notification} promote from {From} to {To}", value, oldState, newState);
             }
         }
 
@@ -143,8 +143,7 @@ namespace SmsSync.Services
             if (value != null)
             {
                 var (oldState, newState) = value.Rollback();
-                _logger.Information("Notification {@Notification} rollback from {From} to {To}", value, oldState,
-                    newState);
+                _logger.Information("Notification {@Notification} rollback from {From} to {To}", value, oldState, newState);
             }
         }
 
@@ -153,7 +152,7 @@ namespace SmsSync.Services
             lock (_lock)
             {
                 var result = _notifications.RemoveWhere(r => notifications.Any(r.Is));
-                _logger.Debug("Removed from queue {n}/{N} notifications",
+                _logger.Information("Removed from queue {n}/{N} notifications", 
                     notifications.Length, result);
             }
         }

@@ -17,15 +17,15 @@ namespace SmsSync.Services
         Task SendSms(Message message, CancellationToken cancellationToken);
     }
     
-    public class MessageHttpHttpService : IMessageHttpService
+    public class MessageHttpService : IMessageHttpService
     {
-        private readonly ILogger _logger = Log.ForContext<MessageHttpHttpService>();
+        private readonly ILogger _logger = Log.ForContext<MessageHttpService>();
 
         private readonly HttpClient _httpClient;
         private readonly int _retryCount;
         private readonly TimeSpan _retryInterval;
 
-        public MessageHttpHttpService(HttpConfiguration configuration)
+        public MessageHttpService(HttpConfiguration configuration)
         {
             _httpClient = new HttpClient
             {
