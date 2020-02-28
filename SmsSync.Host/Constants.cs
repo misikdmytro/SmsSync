@@ -10,6 +10,14 @@
             public const string ServiceType = "False";
         }
 
+        public static class States
+        {
+            public const string New = "NEW";
+            public const string InProgress = "IN_PROGRESS";
+            public const string Sent = "SENT";
+            public const string Fail = "FAIL";
+        }
+
         public static class Resources
         {
             public static class Types

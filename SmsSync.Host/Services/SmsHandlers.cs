@@ -84,23 +84,17 @@ namespace SmsSync.Services
     {
         private readonly IInboxRepository _repository;
 
-        public CommitSmsHandler(IInboxRepository repository)
-        {
-            _repository = repository;
-        }
+        public CommitSmsHandler(IInboxRepository repository) => _repository = repository;
 
-        public Task HandleAsync(DbSms sms, CancellationToken token = default) => _repository.Commit(sms);
+        public Task HandleAsync(DbSms sms, CancellationToken token = default) => _repository.TakeAndPromote(sms, Constants.States.Sent);
     }
     
     public class FailSmsHandler : ISmsHandler
     {
         private readonly IInboxRepository _repository;
 
-        public FailSmsHandler(IInboxRepository repository)
-        {
-            _repository = repository;
-        }
+        public FailSmsHandler(IInboxRepository repository) => _repository = repository;
 
-        public Task HandleAsync(DbSms sms, CancellationToken token = default) => _repository.Fail(sms);
+        public Task HandleAsync(DbSms sms, CancellationToken token = default) => _repository.TakeAndPromote(sms, Constants.States.Fail);
     }
 }

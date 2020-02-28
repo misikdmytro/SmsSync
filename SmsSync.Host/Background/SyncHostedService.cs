@@ -40,7 +40,7 @@ namespace SmsSync.Background
             {
 	            while (!cancellationToken.IsCancellationRequested)
 	            {
-		            var messages = await _inboxRepository.ReadAsync();
+		            var messages = await _inboxRepository.TakeAndPromote(Constants.States.New, Constants.States.InProgress);
 
 		            foreach (var sms in messages)
 		            {
