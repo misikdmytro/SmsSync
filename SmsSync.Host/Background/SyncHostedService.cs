@@ -52,12 +52,13 @@ namespace SmsSync.Background
                                 if (t.IsCompletedSuccessfully)
                                 {
                                     _logger.Debug("Remove sms {@Sms} from set", sms);
-                                    _hashSet.Remove(sms);
                                 }
                                 else
                                 {
                                     _logger.Error(t.Exception, "Task completed with errors. Sms {@Sms}", sms);
                                 }
+
+                                _hashSet.Remove(sms);
                             }, cancellationToken);
 
                             tasks.Add(task);
