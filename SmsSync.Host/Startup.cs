@@ -42,6 +42,7 @@ namespace SmsSync
             var configuration = Configuration.GetSection("ServiceConfig").Get<AppConfiguration>();
 
             services.AddSingleton(configuration);
+            services.AddSingleton(configuration.Background);
             services.AddSingleton(configuration.Http);
             services.AddSingleton(configuration.Database);
             services.AddSingleton(configuration.Resources);

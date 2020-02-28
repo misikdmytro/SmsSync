@@ -37,44 +37,38 @@ namespace SmsSync.Services
         {
         }
 
-        public async Task<DbSms[]> ReadAsync()
+        public Task<DbSms[]> ReadAsync()
         {
-            using (var connection = CreateConnection())
+            return ExecuteAsync(async connection =>
             {
                 var sms = await connection.QueryAsync<DbSms>(ReadQuery,
                     new {States = _statesToSelect},
                     commandTimeout: CommandTimeout);
 
                 return sms.ToArray();
-            }
+            });
         }
 
-        public async Task Commit(DbSms message)
+        public Task Commit(DbSms message)
         {
-            using (var connection = CreateConnection())
-            {
-                await connection.ExecuteAsync(UpdateQuery,
-                    new
-                    {
-                        message.OrderId, message.TerminalId, State = SentState, CurrentState = message.State,
-                        message.LastUpdateTime, message.SetTime
-                    },
-                    commandTimeout: CommandTimeout);
-            }
+            return ExecuteAsync(connection => connection.ExecuteAsync(UpdateQuery,
+                new
+                {
+                    message.OrderId, message.TerminalId, State = SentState, CurrentState = message.State,
+                    message.LastUpdateTime, message.SetTime
+                },
+                commandTimeout: CommandTimeout));
         }
 
-        public async Task Fail(DbSms message)
+        public Task Fail(DbSms message)
         {
-            using (var connection = CreateConnection())
-            {
-                await connection.ExecuteAsync(UpdateQuery,
-                    new
-                    {
-                        message.OrderId, message.TerminalId, State = FailState, CurrentState = message.State,
-                        message.LastUpdateTime, message.SetTime
-                    },
-                    commandTimeout: CommandTimeout);
-            }
+            return ExecuteAsync(connection => connection.ExecuteAsync(UpdateQuery,
+                new
+                {
+                    message.OrderId, message.TerminalId, State = FailState, CurrentState = message.State,
+                    message.LastUpdateTime, message.SetTime
+                },
+                commandTimeout: CommandTimeout));
         }
     }
 }

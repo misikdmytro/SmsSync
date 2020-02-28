@@ -21,14 +21,11 @@ namespace SmsSync.Services
         {
         }
         
-        public async Task<DbJob> GetJobById(int jobId, int terminalId)
+        public Task<DbJob> GetJobById(int jobId, int terminalId)
         {
-            using (var connection = CreateConnection())
-            {
-                return await connection.QuerySingleAsync<DbJob>(GetJobQuery,
-                    new {JobId = jobId, TerminalId = terminalId},
-                    commandTimeout: CommandTimeout);
-            }
+            return ExecuteAsync(connection => connection.QuerySingleAsync<DbJob>(GetJobQuery,
+                new {JobId = jobId, TerminalId = terminalId},
+                commandTimeout: CommandTimeout));
         }
     }
 }

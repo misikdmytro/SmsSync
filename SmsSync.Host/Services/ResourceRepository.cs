@@ -22,14 +22,11 @@ namespace SmsSync.Services
         {
         }
 
-        public async Task<DbResource> GetResource(int resourceId, int terminalId)
+        public Task<DbResource> GetResource(int resourceId, int terminalId)
         {
-            using (var connection = CreateConnection())
-            {
-                return await connection.QuerySingleAsync<DbResource>(ReadQuery,
-                    new {ResourceId = resourceId, TerminalId = terminalId},
-                    commandTimeout: CommandTimeout);
-            }
+            return ExecuteAsync(connection => connection.QuerySingleAsync<DbResource>(ReadQuery,
+                new {ResourceId = resourceId, TerminalId = terminalId},
+                commandTimeout: CommandTimeout));
         }
     }
 }
