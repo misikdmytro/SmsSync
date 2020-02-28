@@ -31,10 +31,7 @@ namespace SmsSync.Services
                         i => _database.RetryInterval,
                         (exception, ts, i, context) =>
                         {
-                            if (i < _database.Retry)
-                            {
-                                _logger.Warning(exception, "Retry db query after {@TimeSpan}", ts);
-                            }
+                            _logger.Warning(exception, "Retry at {N} db query after {@TimeSpan}", i, ts);
                         })
                     .ExecuteAsync(() => func(connection));
             }

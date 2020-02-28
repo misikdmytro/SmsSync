@@ -16,7 +16,7 @@ namespace SmsSync.Services
     {
         Task SendSms(Message message, CancellationToken cancellationToken = default);
     }
-    
+
     public class MessageHttpService : IMessageHttpService
     {
         private readonly ILogger _logger = Log.ForContext<MessageHttpService>();
@@ -45,22 +45,19 @@ namespace SmsSync.Services
         {
             return Policy
                 .Handle<Exception>()
-                .WaitAndRetryAsync(_retryCount, 
+                .WaitAndRetryAsync(_retryCount,
                     i => _retryInterval,
                     (exception, ts, i, context) =>
                     {
-                        if (i < _retryCount)
-                        {
-                            _logger.Warning(exception, "Retry http call after {@TimeSpan}", ts);
-                        }
+                        _logger.Warning(exception, "Retry at {N} http call after {@TimeSpan}", i, ts);
                     })
                 .ExecuteAsync(async () =>
                 {
                     var response = await _httpClient.PostAsync("api/contents",
-                        new ObjectContent<Message>(message, new JsonMediaTypeFormatter(), 
+                        new ObjectContent<Message>(message, new JsonMediaTypeFormatter(),
                             System.Net.Mime.MediaTypeNames.Application.Json),
                         cancellationToken);
-                    
+
                     if (!response.IsSuccessStatusCode)
                     {
                         var content = await response.Content.ReadAsStringAsync();
