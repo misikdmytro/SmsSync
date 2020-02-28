@@ -2,7 +2,6 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Serilog;
-using SmsSync.Configuration;
 using SmsSync.Models;
 
 namespace SmsSync.Services
@@ -20,11 +19,11 @@ namespace SmsSync.Services
     {
         private readonly ILogger _logger = Log.ForContext<ChainSmsHandler>(); 
         
-        private readonly ChainSmsHandler _successor;
+        private readonly IChainSmsHandler _successor;
         private readonly ISmsHandler _current;
-        private readonly ChainSmsHandler _failer;
+        private readonly IChainSmsHandler _failer;
 
-        public ChainSmsHandler(ISmsHandler current, ChainSmsHandler successor, ChainSmsHandler failer)
+        public ChainSmsHandler(ISmsHandler current, IChainSmsHandler successor, IChainSmsHandler failer)
         {
             _successor = successor;
             _current = current;
@@ -57,22 +56,22 @@ namespace SmsSync.Services
     
     public class SendSmsHandler : ISmsHandler
     {
-        private readonly ILogger _logger = Log.ForContext<SendSmsHandler>(); 
+        private readonly ILogger _logger = Log.ForContext<SendSmsHandler>();
 
         private readonly IMessageBuilder _messageBuilder;
-        private readonly HttpConfiguration _httpConfiguration;
+        private readonly IMessageSendServiceFactory _sendServiceFactory;
 
-        public SendSmsHandler(IMessageBuilder messageBuilder, HttpConfiguration httpConfiguration)
+        public SendSmsHandler(IMessageBuilder messageBuilder, IMessageSendServiceFactory sendServiceFactory)
         {
             _messageBuilder = messageBuilder;
-            _httpConfiguration = httpConfiguration;
+            _sendServiceFactory = sendServiceFactory;
         }
 
         public async Task HandleAsync(DbSms sms, CancellationToken token = default)
         {
             _logger.Debug("Try to build message. Sms {@Sms}", sms);
             var message = await _messageBuilder.Build(sms);
-            using (var messageService = new MessageHttpService(_httpConfiguration))
+            using (var messageService = _sendServiceFactory.CreateHttpService())
             {
                 _logger.Debug("Try to send message. Message {@Message}", message);
                 await messageService.SendSms(message, token);

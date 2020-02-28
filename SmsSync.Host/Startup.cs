@@ -12,7 +12,7 @@ namespace SmsSync
 {
     public class Startup
     {
-        private ILogger _logger = Log.ForContext<Startup>();
+        private readonly ILogger _logger = Log.ForContext<Startup>();
 
         private readonly IHostingEnvironment _environment;
 
@@ -60,7 +60,7 @@ namespace SmsSync
                 return sendChain;
             });
             
-            services.AddTransient<IMessageHttpService, MessageHttpService>();
+            services.AddTransient<IMessageSendServiceFactory, MessageSendServiceFactory>();
             
             services.AddTransient<IInboxRepository, InboxRepository>();
             services.AddTransient<IJobsRepository, JobsRepository>();
@@ -73,7 +73,6 @@ namespace SmsSync
             _logger.Information("Services configured.");
         }
 
-        // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IHostingEnvironment env)
         {
             _logger.Information("Configuring app...");

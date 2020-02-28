@@ -19,7 +19,7 @@ namespace SmsSync.Background
         private readonly IInboxRepository _inboxRepository;
         private readonly IChainSmsHandler _chainSmsHandler;
         private readonly BackgroundConfiguration _backgroundConfiguration;
-        private readonly HashSet<DbSms> _hashSet;
+        private readonly HashSet<DbSms> _smsSet;
 
         public SyncHostedService(IChainSmsHandler chainSmsHandler,
             IInboxRepository inboxRepository, BackgroundConfiguration backgroundConfiguration)
@@ -27,7 +27,8 @@ namespace SmsSync.Background
             _chainSmsHandler = chainSmsHandler;
             _inboxRepository = inboxRepository;
             _backgroundConfiguration = backgroundConfiguration;
-            _hashSet = new HashSet<DbSms>(new SmsEqualityComparer());
+
+            _smsSet = new HashSet<DbSms>(new SmsEqualityComparer());
         }
 
         protected override async Task ExecuteAsync(CancellationToken cancellationToken)
@@ -44,7 +45,7 @@ namespace SmsSync.Background
 
 		            foreach (var sms in messages)
 		            {
-			            if (_hashSet.Add(sms))
+			            if (_smsSet.Add(sms))
 			            {
 				            var task = Task.Run(() => _chainSmsHandler.HandleAsync(sms, cancellationToken),
 					            cancellationToken).ContinueWith(t =>
@@ -54,7 +55,7 @@ namespace SmsSync.Background
 						            _logger.Error(t.Exception, "Task completed with errors. Sms {@Sms}", sms);
                                 }
 
-                                _hashSet.Remove(sms);
+                                _smsSet.Remove(sms);
                                 _logger.Debug("Sms {@Sms} removed from set", sms);
                             }, cancellationToken);
 
