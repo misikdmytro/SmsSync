@@ -44,14 +44,14 @@ namespace SmsSync.Services
         public Task SendSms(Message message, CancellationToken cancellationToken = default)
         {
             return Policy
-                .Handle<InvalidOperationException>()
+                .Handle<Exception>()
                 .WaitAndRetryAsync(_retryCount, 
                     i => _retryInterval,
                     (exception, ts, i, context) =>
                     {
                         if (i < _retryCount)
                         {
-                            _logger.Warning(exception, "Retry http call");
+                            _logger.Warning(exception, "Retry http call after {@TimeSpan}", ts);
                         }
                     })
                 .ExecuteAsync(async () =>

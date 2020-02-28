@@ -33,7 +33,7 @@ namespace SmsSync.Services
                         {
                             if (i < _database.Retry)
                             {
-                                _logger.Warning(exception, "Retry db query");
+                                _logger.Warning(exception, "Retry db query after {@TimeSpan}", ts);
                             }
                         })
                     .ExecuteAsync(() => func(connection));
