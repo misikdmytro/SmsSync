@@ -49,17 +49,14 @@ namespace SmsSync.Background
 				            var task = Task.Run(() => _chainSmsHandler.HandleAsync(sms, cancellationToken),
 					            cancellationToken).ContinueWith(t =>
 				            {
-					            if (t.IsCompletedSuccessfully)
-					            {
-						            _logger.Debug("Remove sms {@Sms} from set", sms);
-					            }
-					            else
+					            if (!t.IsCompletedSuccessfully)
 					            {
 						            _logger.Error(t.Exception, "Task completed with errors. Sms {@Sms}", sms);
-					            }
+                                }
 
-					            _hashSet.Remove(sms);
-				            }, cancellationToken);
+                                _hashSet.Remove(sms);
+                                _logger.Debug("Sms {@Sms} removed from set", sms);
+                            }, cancellationToken);
 
 				            tasks.Add(task);
 			            }
