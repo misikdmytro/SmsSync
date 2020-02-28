@@ -38,40 +38,45 @@ namespace SmsSync.Background
 
             try
             {
-                while (!cancellationToken.IsCancellationRequested)
-                {
-                    var messages = await _inboxRepository.ReadAsync();
+	            while (!cancellationToken.IsCancellationRequested)
+	            {
+		            var messages = await _inboxRepository.ReadAsync();
 
-                    foreach (var sms in messages)
-                    {
-                        if (_hashSet.Add(sms))
-                        {
-                            var task = Task.Run(() => _chainSmsHandler.HandleAsync(sms, cancellationToken),
-                                cancellationToken).ContinueWith(t =>
-                            {
-                                if (t.IsCompletedSuccessfully)
-                                {
-                                    _logger.Debug("Remove sms {@Sms} from set", sms);
-                                }
-                                else
-                                {
-                                    _logger.Error(t.Exception, "Task completed with errors. Sms {@Sms}", sms);
-                                }
+		            foreach (var sms in messages)
+		            {
+			            if (_hashSet.Add(sms))
+			            {
+				            var task = Task.Run(() => _chainSmsHandler.HandleAsync(sms, cancellationToken),
+					            cancellationToken).ContinueWith(t =>
+				            {
+					            if (t.IsCompletedSuccessfully)
+					            {
+						            _logger.Debug("Remove sms {@Sms} from set", sms);
+					            }
+					            else
+					            {
+						            _logger.Error(t.Exception, "Task completed with errors. Sms {@Sms}", sms);
+					            }
 
-                                _hashSet.Remove(sms);
-                            }, cancellationToken);
+					            _hashSet.Remove(sms);
+				            }, cancellationToken);
 
-                            tasks.Add(task);
-                        }
-                    }
+				            tasks.Add(task);
+			            }
+		            }
 
-                    tasks.RemoveAll(t => t.IsCompleted);
-                    await Task.Delay(_backgroundConfiguration.PingInterval, cancellationToken);
-                }
+		            tasks.RemoveAll(t => t.IsCompleted);
+		            await Task.Delay(_backgroundConfiguration.PingInterval, cancellationToken);
+	            }
             }
             catch (OperationCanceledException oce)
             {
-                _logger.Warning(oce, "Operation was canceled. Ignore.");
+	            _logger.Warning(oce, "Operation was canceled. Ignore.");
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Unhandled exception thrown");
+                throw;
             }
             finally
             {

@@ -103,9 +103,4 @@ namespace SmsSync.Services
 
         public Task HandleAsync(DbSms sms, CancellationToken token = default) => _repository.Fail(sms);
     }
-    
-    public class NullSmsHandler : ISmsHandler
-    {
-        public Task HandleAsync(DbSms sms, CancellationToken token = default) => Task.CompletedTask;
-    }
 }
