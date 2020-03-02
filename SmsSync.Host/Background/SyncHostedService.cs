@@ -80,6 +80,8 @@ namespace SmsSync.Background
             {
                 await Task.WhenAll(tasks);
             }
+            
+            _logger.Information("Stop main threads.");
         }
     }
 }
