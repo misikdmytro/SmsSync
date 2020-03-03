@@ -5,6 +5,7 @@ using System.Net.Http.Formatting;
 using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
+using Newtonsoft.Json.Serialization;
 using Polly;
 using Serilog;
 using SmsSync.Configuration;
@@ -53,8 +54,16 @@ namespace SmsSync.Services
                     })
                 .ExecuteAsync(async () =>
                 {
+                    var typeFormatter = new JsonMediaTypeFormatter
+                    {
+                        SerializerSettings =
+                        {
+                            ContractResolver = new CamelCasePropertyNamesContractResolver()
+                        }
+                    };
+                    
                     var response = await _httpClient.PostAsync("api/contents",
-                        new ObjectContent<Message>(message, new JsonMediaTypeFormatter(),
+                        new ObjectContent<Message>(message, typeFormatter,
                             System.Net.Mime.MediaTypeNames.Application.Json),
                         cancellationToken);
 
