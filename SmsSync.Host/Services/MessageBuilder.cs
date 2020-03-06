@@ -52,7 +52,7 @@ namespace SmsSync.Services
                 var message = new Message
                 {
                     Content = content,
-                    Destination = sms.ClientPhone,
+                    Destination = BuildDestination(sms.ClientPhone),
                     Source = Constants.MessageData.Source,
                     BearerType = Constants.MessageData.BearerType,
                     ContentType = Constants.MessageData.ContentType,
@@ -111,6 +111,23 @@ namespace SmsSync.Services
         {
             var resource = await _resourceRepository.GetResource(resourceId, terminalId);
             return resource.PlaceId.ToString();
+        }
+
+        private string BuildDestination(string phoneNumber)
+        {
+            // 1. Remove from number first '+' or '0'
+            // +380501234567 -> 380501234567 
+            // 0501234567 -> 501234567
+            var result = phoneNumber.Trim('+').TrimStart('0');
+
+            // 2. Prepend '380' at start if number start with another symbols
+            // 501234567 -> 380501234567
+            if (!result.StartsWith("380"))
+            {
+                result = $"380{result}";
+            }
+
+            return result;
         }
     }
 }
