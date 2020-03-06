@@ -38,7 +38,7 @@ namespace SmsSync.Background
             
             _batchSize = batchSize;
 
-            _smsSet = new HashSet<DbSms>(new SmsEqualityComparer());
+            _smsSet = new HashSet<DbSms>(_batchSize * 2, new SmsEqualityComparer());
         }
 
         protected override async Task ExecuteAsync(CancellationToken cancellationToken)
