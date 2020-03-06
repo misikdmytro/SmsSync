@@ -8,43 +8,49 @@ namespace SmsSync.Services
 {
     public interface IInboxRepository
     {
-        Task<DbSms[]> TakeAndPromote(string oldState, string newState);
-        Task<DbSms[]> TakeAndPromote(DbSms dbSms, string newState);
+        Task<DbSms[]> TakeAndPromote(string oldState, string newState, int batchSize = int.MaxValue);
+        Task<DbSms[]> TakeAndPromote(DbSms dbSms, string newState, int batchSize = int.MaxValue);
     }
 
     public class InboxRepository : BaseRepository, IInboxRepository
     {
         private const string UpdateQueryByState = @"
-                    UPDATE dbo.SmsEvents
+                    UPDATE dboSmsEvent
                         SET State = @State, LastUpdateTime = CURRENT_TIMESTAMP
                             OUTPUT INSERTED.*
-                        WHERE State = @CurrentState";
+                        FROM (SELECT TOP (@BatchSize) * 
+		                    FROM dbo.SmsEvents
+                            WHERE State = @CurrentState
+                            ORDER BY SetTime ASC) AS dboSmsEvent";
 
         private const string UpdateQueryBySms = @"
-                    UPDATE dbo.SmsEvents
+                    UPDATE dboSmsEvent
                         SET State = @State, LastUpdateTime = CURRENT_TIMESTAMP
                             OUTPUT INSERTED.*
-                        WHERE OrderId = @OrderId AND TerminalId = @TerminalId AND State = @CurrentState
-                            AND SetTime = @SetTime AND LastUpdateTime = @LastUpdateTime";
+                        FROM (SELECT TOP (@BatchSize) * 
+		                    FROM dbo.SmsEvents
+                            WHERE OrderId = @OrderId AND TerminalId = @TerminalId AND State = @CurrentState
+                                AND SetTime = @SetTime AND LastUpdateTime = @LastUpdateTime
+                            ORDER BY SetTime ASC) AS dboSmsEvent";
 
         public InboxRepository(DatabaseConfiguration database)
             : base(database)
         {
         }
 
-        public Task<DbSms[]> TakeAndPromote(string oldState, string newState)
+        public Task<DbSms[]> TakeAndPromote(string oldState, string newState, int batchSize = int.MaxValue)
         {
             return ExecuteAsync(async connection =>
             {
                 var sms = await connection.QueryAsync<DbSms>(UpdateQueryByState,
-                    new { State = newState, CurrentState = oldState },
+                    new { BatchSize = batchSize, State = newState, CurrentState = oldState },
                     commandTimeout: CommandTimeout);
 
                 return sms.ToArray();
             });
         }
 
-        public Task<DbSms[]> TakeAndPromote(DbSms dbSms, string newState)
+        public Task<DbSms[]> TakeAndPromote(DbSms dbSms, string newState, int batchSize = int.MaxValue)
         {
             return ExecuteAsync(async connection =>
             {
@@ -56,7 +62,8 @@ namespace SmsSync.Services
                         State = newState,
                         CurrentState = dbSms.State,
                         dbSms.LastUpdateTime,
-                        dbSms.SetTime
+                        dbSms.SetTime,
+                        BatchSize = batchSize,
                     },
                     commandTimeout: CommandTimeout);
 

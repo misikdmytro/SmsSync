@@ -10,15 +10,17 @@ namespace SmsSync.Services
     public class MessageSendServiceFactory : IMessageSendServiceFactory
     {
         private readonly HttpConfiguration _httpConfiguration;
+        private readonly IHttpClientsPool _httpClientsPool;
 
-        public MessageSendServiceFactory(HttpConfiguration httpConfiguration)
+        public MessageSendServiceFactory(HttpConfiguration httpConfiguration, IHttpClientsPool httpClientsPool)
         {
             _httpConfiguration = httpConfiguration;
+            _httpClientsPool = httpClientsPool;
         }
 
         public IMessageHttpService CreateHttpService()
         {
-            return new MessageHttpService(_httpConfiguration);
+            return new MessageHttpService(_httpConfiguration, _httpClientsPool);
         }
     }
 }
