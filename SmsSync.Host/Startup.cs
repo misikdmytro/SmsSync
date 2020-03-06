@@ -62,11 +62,10 @@ namespace SmsSync
                 return sendChain;
             });
             
-            services.AddTransient<IMessageSendServiceFactory, MessageSendServiceFactory>();
-            
             services.AddTransient<IInboxRepository, InboxRepository>();
             services.AddTransient<IJobsRepository, JobsRepository>();
             services.AddTransient<IResourceRepository, ResourceRepository>();
+            services.AddTransient<IMessageHttpService, MessageHttpService>();
 
             services.AddSingleton<IHttpClientsPool, HttpClientsPool>();
             services.AddSingleton<IMessageBuilder, MessageBuilder>();

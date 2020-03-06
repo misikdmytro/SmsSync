@@ -13,7 +13,7 @@ using SmsSync.Models;
 
 namespace SmsSync.Services
 {
-    public interface IMessageHttpService : IDisposable
+    public interface IMessageHttpService
     {
         Task SendSms(Message message, CancellationToken cancellationToken = default);
     }
@@ -23,6 +23,7 @@ namespace SmsSync.Services
         private readonly ILogger _logger = Log.ForContext<MessageHttpService>();
 
         private readonly IHttpClientsPool _httpClientsPool;
+        
         private readonly int _retryCount;
         private readonly TimeSpan _retryInterval;
 
@@ -67,11 +68,6 @@ namespace SmsSync.Services
                             $"External service returned {response.StatusCode} status code. Content {content}");
                     }
                 });
-        }
-
-        public void Dispose()
-        {
-            _httpClientsPool?.Dispose();
         }
     }
 }
