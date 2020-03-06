@@ -21,12 +21,22 @@ namespace SmsSync.Background
         private readonly BackgroundConfiguration _backgroundConfiguration;
         private readonly HashSet<DbSms> _smsSet;
 
+        private readonly int _batchSize;
+
         public SyncHostedService(IChainSmsHandler chainSmsHandler,
-            IInboxRepository inboxRepository, BackgroundConfiguration backgroundConfiguration)
+            IInboxRepository inboxRepository, BackgroundConfiguration backgroundConfiguration, 
+            int batchSize)
         {
             _chainSmsHandler = chainSmsHandler;
             _inboxRepository = inboxRepository;
             _backgroundConfiguration = backgroundConfiguration;
+
+            if (batchSize <= 0)
+            {
+	            throw new ArgumentException("Batch size should be positive", nameof(batchSize));
+            }
+            
+            _batchSize = batchSize;
 
             _smsSet = new HashSet<DbSms>(new SmsEqualityComparer());
         }
@@ -41,8 +51,15 @@ namespace SmsSync.Background
             {
 	            while (!cancellationToken.IsCancellationRequested)
 	            {
-		            var messages = await _inboxRepository.TakeAndPromote(Constants.States.New, Constants.States.InProgress);
-
+		            var currentBatch = _batchSize - tasks.Count;
+		            
+		            var messages = Array.Empty<DbSms>();
+		            if (currentBatch > 0)
+		            {
+			            messages = await _inboxRepository.TakeAndPromote(Constants.States.New, 
+				            Constants.States.InProgress, currentBatch);
+		            }
+		            
 		            foreach (var sms in messages)
 		            {
 			            if (_smsSet.Add(sms))

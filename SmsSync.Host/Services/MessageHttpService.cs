@@ -13,7 +13,7 @@ using SmsSync.Models;
 
 namespace SmsSync.Services
 {
-    public interface IMessageHttpService : IDisposable
+    public interface IMessageHttpService
     {
         Task SendSms(Message message, CancellationToken cancellationToken = default);
     }
@@ -22,22 +22,14 @@ namespace SmsSync.Services
     {
         private readonly ILogger _logger = Log.ForContext<MessageHttpService>();
 
-        private readonly HttpClient _httpClient;
+        private readonly IHttpClientsPool _httpClientsPool;
+        
         private readonly int _retryCount;
         private readonly TimeSpan _retryInterval;
 
-        public MessageHttpService(HttpConfiguration configuration)
+        public MessageHttpService(HttpConfiguration configuration, IHttpClientsPool httpClientsPool)
         {
-            _httpClient = new HttpClient
-            {
-                BaseAddress = new Uri(configuration.BaseUrl),
-                Timeout = configuration.Timeout,
-                DefaultRequestHeaders =
-                {
-                    Authorization = new AuthenticationHeaderValue(configuration.TokenScheme, configuration.TokenValue)
-                }
-            };
-
+            _httpClientsPool = httpClientsPool;
             _retryCount = configuration.Retry;
             _retryInterval = configuration.RetryInterval;
         }
@@ -61,8 +53,10 @@ namespace SmsSync.Services
                             ContractResolver = new CamelCasePropertyNamesContractResolver()
                         }
                     };
+
+                    var httpClient = _httpClientsPool.TakeHttpClient();
                     
-                    var response = await _httpClient.PostAsync("api/contents",
+                    var response = await httpClient.PostAsync("api/contents",
                         new ObjectContent<Message>(message, typeFormatter,
                             System.Net.Mime.MediaTypeNames.Application.Json),
                         cancellationToken);
@@ -74,11 +68,6 @@ namespace SmsSync.Services
                             $"External service returned {response.StatusCode} status code. Content {content}");
                     }
                 });
-        }
-
-        public void Dispose()
-        {
-            _httpClient?.Dispose();
         }
     }
 }

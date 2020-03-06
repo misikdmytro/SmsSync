@@ -59,23 +59,21 @@ namespace SmsSync.Services
         private readonly ILogger _logger = Log.ForContext<SendSmsHandler>();
 
         private readonly IMessageBuilder _messageBuilder;
-        private readonly IMessageSendServiceFactory _sendServiceFactory;
+        private readonly IMessageHttpService _messageHttpService;
 
-        public SendSmsHandler(IMessageBuilder messageBuilder, IMessageSendServiceFactory sendServiceFactory)
+        public SendSmsHandler(IMessageBuilder messageBuilder, IMessageHttpService messageHttpService)
         {
             _messageBuilder = messageBuilder;
-            _sendServiceFactory = sendServiceFactory;
+            _messageHttpService = messageHttpService;
         }
 
         public async Task HandleAsync(DbSms sms, CancellationToken token = default)
         {
             _logger.Debug("Try to build message. Sms {@Sms}", sms);
             var message = await _messageBuilder.Build(sms);
-            using (var messageService = _sendServiceFactory.CreateHttpService())
-            {
-                _logger.Debug("Try to send message. Message {@Message}", message);
-                await messageService.SendSms(message, token);
-            }
+            
+            _logger.Debug("Try to send message. Message {@Message}", message);
+            await _messageHttpService.SendSms(message, token);
         }
     }
     

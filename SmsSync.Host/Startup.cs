@@ -3,10 +3,12 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Serilog;
 using SmsSync.Background;
 using SmsSync.Configuration;
 using SmsSync.Services;
+using IHostingEnvironment = Microsoft.AspNetCore.Hosting.IHostingEnvironment;
 
 namespace SmsSync
 {
@@ -60,15 +62,22 @@ namespace SmsSync
                 return sendChain;
             });
             
-            services.AddTransient<IMessageSendServiceFactory, MessageSendServiceFactory>();
-            
             services.AddTransient<IInboxRepository, InboxRepository>();
             services.AddTransient<IJobsRepository, JobsRepository>();
             services.AddTransient<IResourceRepository, ResourceRepository>();
+            services.AddTransient<IMessageHttpService, MessageHttpService>();
 
+            services.AddSingleton<IHttpClientsPool, HttpClientsPool>();
             services.AddSingleton<IMessageBuilder, MessageBuilder>();
 
-            services.AddHostedService<SyncHostedService>();
+            services.AddTransient<IHostedService, SyncHostedService>(sp => 
+                new SyncHostedService(
+                    sp.GetRequiredService<IChainSmsHandler>(),
+                    sp.GetRequiredService<IInboxRepository>(),
+                    configuration.Background,
+                    configuration.Database.BatchSize
+                )
+            );
 
             _logger.Information("Services configured.");
         }
