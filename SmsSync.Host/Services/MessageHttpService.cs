@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Net.Http;
 using System.Net.Http.Formatting;
-using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Serialization;
@@ -23,7 +21,7 @@ namespace SmsSync.Services
         private readonly ILogger _logger = Log.ForContext<MessageHttpService>();
 
         private readonly IHttpClientsPool _httpClientsPool;
-        
+
         private readonly int _retryCount;
         private readonly TimeSpan _retryInterval;
 
@@ -55,17 +53,15 @@ namespace SmsSync.Services
                     };
 
                     var httpClient = _httpClientsPool.TakeHttpClient();
-                    
-                    var response = await httpClient.PostAsync("api/contents",
-                        new ObjectContent<Message>(message, typeFormatter,
-                            System.Net.Mime.MediaTypeNames.Application.Json),
-                        cancellationToken);
 
-                    if (!response.IsSuccessStatusCode)
+                    using (var request = new ObjectContent<Message>(message, typeFormatter, System.Net.Mime.MediaTypeNames.Application.Json))
+                    using (var response = await httpClient.PostAsync("api/contents", request, cancellationToken))
                     {
-                        var content = await response.Content.ReadAsStringAsync();
-                        throw new InvalidOperationException(
-                            $"External service returned {response.StatusCode} status code. Content {content}");
+                        if (!response.IsSuccessStatusCode)
+                        {
+                            var content = await response.Content.ReadAsStringAsync();
+                            throw new InvalidOperationException($"External service returned {response.StatusCode} status code. Content {content}");
+                        }
                     }
                 });
         }
