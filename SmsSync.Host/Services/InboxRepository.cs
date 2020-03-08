@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
 using Dapper;
+using Serilog;
 using SmsSync.Configuration;
 using SmsSync.Models;
 
@@ -14,6 +15,8 @@ namespace SmsSync.Services
 
     public class InboxRepository : BaseRepository, IInboxRepository
     {
+        private readonly ILogger _logger = Log.ForContext<InboxRepository>();
+
         private const string UpdateQueryByState = @"
                     UPDATE dboSmsEvent
                         SET State = @State, LastUpdateTime = CURRENT_TIMESTAMP
@@ -42,8 +45,12 @@ namespace SmsSync.Services
         {
             return ExecuteAsync(async connection =>
             {
+                var @params = new { BatchSize = batchSize, State = newState, CurrentState = oldState };
+
+                _logger.Debug("Execute {MethodName} with parameters {@Params}", nameof(TakeAndPromote), @params);
+
                 var sms = await connection.QueryAsync<DbSms>(UpdateQueryByState,
-                    new { BatchSize = batchSize, State = newState, CurrentState = oldState },
+                    @params,
                     commandTimeout: CommandTimeout);
 
                 return sms.ToArray();
@@ -54,17 +61,21 @@ namespace SmsSync.Services
         {
             return ExecuteAsync(async connection =>
             {
+                var @params = new
+                {
+                    dbSms.OrderId,
+                    dbSms.TerminalId,
+                    State = newState,
+                    CurrentState = dbSms.State,
+                    dbSms.LastUpdateTime,
+                    dbSms.SetTime,
+                    BatchSize = batchSize,
+                };
+
+                _logger.Debug("Execute {MethodName} with parameters {@Params}", nameof(TakeAndPromote), @params);
+
                 var sms = await connection.QueryAsync<DbSms>(UpdateQueryBySms,
-                    new
-                    {
-                        dbSms.OrderId,
-                        dbSms.TerminalId,
-                        State = newState,
-                        CurrentState = dbSms.State,
-                        dbSms.LastUpdateTime,
-                        dbSms.SetTime,
-                        BatchSize = batchSize,
-                    },
+                    @params,
                     commandTimeout: CommandTimeout);
 
                 return sms.ToArray();
