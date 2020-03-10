@@ -1,134 +1,58 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
+using Newtonsoft.Json.Linq;
 using Serilog;
-using SmsSync.Configuration;
 using SmsSync.Models;
+using SmsSync.Templates;
 
 namespace SmsSync.Services
 {
     public interface IMessageBuilder
     {
-        Task<Message> Build(DbSms sms);
+        Task<JObject> Build(DbSms sms);
     }
 
     public class MessageBuilder : IMessageBuilder
     {
         private readonly ILogger _logger = Log.ForContext<MessageBuilder>();
 
-        private readonly IDictionary<string, Func<DbSms, Task<string>>> _converters;
-        
-        private readonly ResourcesConfiguration _configuration;
-        private readonly IJobsRepository _jobsRepository;
-        private readonly IResourceRepository _resourceRepository;
+        private readonly IDictionary<string, ITemplateBuilder> _templateBuilders;
+        private readonly IDictionary<string, string> _template;
 
-        public MessageBuilder(ResourcesConfiguration configuration, IJobsRepository jobsRepository, IResourceRepository resourceRepository)
+        public MessageBuilder(IDictionary<string, ITemplateBuilder> templateBuilders, 
+            IDictionary<string, string> template)
         {
-            _converters =
-                new Dictionary<string, Func<DbSms, Task<string>>>
+            _templateBuilders = templateBuilders;
+            _template = template;
+        }
+
+        public async Task<JObject> Build(DbSms sms)
+        {
+            // 1. Create empty body
+            var body = new JObject();
+
+            foreach (var (key, template) in _template)
+            {
+                // 2. Iterate via each body property
+                var value = template;
+
+                do
                 {
-                    [Constants.Resources.TicketIdPlaceholder] = sms => Task.FromResult(sms.OrderId.ToString()),
-                    [Constants.Resources.PlaceIdPlaceholder] = sms => GetPlaceId(sms.ResourceId, sms.TerminalId),
-                    [Constants.Resources.ServiceIdPlaceholder] = sms => GetJobDescription(sms.JobId, sms.TerminalId, sms.LanguageId)
-                };
-            
-            _configuration = configuration;
-            _jobsRepository = jobsRepository;
-            _resourceRepository = resourceRepository;
-        }
+                    // 3. Replace placeholders with real values
+                    foreach (var (templateKey, templateBuilder) in _templateBuilders.Where(tb => value.Contains(tb.Key)))
+                    {
+                        value = value.Replace(templateKey, await templateBuilder.Build(sms));
+                    }
+                } while (_templateBuilders.Any(tb => value.Contains(tb.Key)));
 
-        public async Task<Message> Build(DbSms sms)
-        {
-            // 1. Whether 'Registration' or 'Invitation'
-            var messageType = GetMessageType(sms);
-            
-            // 2. Get message format
-            if (_configuration.Messages.TryGetValue(messageType, out var resource) &&
-                resource.TryGetValue(sms.LanguageId.ToString("D"), out var messageContent))
-            {
-                // 3. Replace placeholders with real values
-                var content = await BuildContent(sms, messageContent);
-                
-                var message = new Message
-                {
-                    Content = content,
-                    Destination = BuildDestination(sms.ClientPhone),
-                    Source = Constants.MessageData.Source,
-                    BearerType = Constants.MessageData.BearerType,
-                    ContentType = Constants.MessageData.ContentType,
-                    ServiceType = Constants.MessageData.ServiceType
-                };
-                
-                _logger.Information("Build message {@Message}", message);
-
-                return message;
+                // 4. Set real value to message
+                body[key] = value;
             }
 
-            throw new ArgumentOutOfRangeException($"Unknown localization {sms.LanguageId}", nameof(sms.LanguageId));
-        }
+            _logger.Information("Build message {@Message}", body);
 
-        private async Task<string> BuildContent(DbSms sms, string content)
-        {
-            foreach (var pattern in _converters)
-            {
-                if (content.Contains(pattern.Key))
-                {
-                    var value = await pattern.Value(sms);
-                    content = content.Replace(pattern.Key, value);
-                }
-            }
-
-            return content;
-        }
-
-        private string GetMessageType(DbSms sms)
-        {
-            return sms.ResourceId == -1
-                ? Constants.Resources.Types.Registration
-                : Constants.Resources.Types.Invitation;
-        }
-        
-        private async Task<string> GetJobDescription(int jobId, int terminalId, Language languageId)
-        {
-            var job = await _jobsRepository.GetJobById(jobId, terminalId);
-
-            switch (languageId)
-            {
-                case Language.Default:
-                    return job.DescriptionUa;
-                case Language.Russian:
-                    return job.DescriptionRu;
-                case Language.Ukrainian:
-                    return job.DescriptionUa;
-                case Language.English:
-                    return job.DescriptionEn;
-                default:
-                    throw new ArgumentOutOfRangeException($"Unknown language {languageId}", nameof(languageId));
-            }
-        }
-
-        private async Task<string> GetPlaceId(int resourceId, int terminalId)
-        {
-            var resource = await _resourceRepository.GetResource(resourceId, terminalId);
-            return resource.PlaceId.ToString();
-        }
-
-        private string BuildDestination(string phoneNumber)
-        {
-            // 1. Remove from number first '+' or '0'
-            // +380501234567 -> 380501234567 
-            // 0501234567 -> 501234567
-            var result = phoneNumber.TrimStart('+')
-                .TrimStart('0');
-
-            // 2. Prepend '380' at start if number start with another symbols
-            // 501234567 -> 380501234567
-            if (!result.StartsWith("380"))
-            {
-                result = $"380{result}";
-            }
-
-            return result;
+            return body;
         }
     }
 }

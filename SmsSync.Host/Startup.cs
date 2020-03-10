@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
@@ -8,6 +10,7 @@ using Serilog;
 using SmsSync.Background;
 using SmsSync.Configuration;
 using SmsSync.Services;
+using SmsSync.Templates;
 using IHostingEnvironment = Microsoft.AspNetCore.Hosting.IHostingEnvironment;
 
 namespace SmsSync
@@ -68,7 +71,25 @@ namespace SmsSync
             services.AddTransient<IMessageHttpService, MessageHttpService>();
 
             services.AddSingleton<IHttpClientsPool, HttpClientsPool>();
-            services.AddSingleton<IMessageBuilder, MessageBuilder>();
+            services.AddSingleton<IMessageBuilder>(sp => new MessageBuilder(
+                sp.GetRequiredService<IDictionary<string, ITemplateBuilder>>(),
+                configuration.Http.SendMessageBody)
+            );
+
+            services.AddTransient<PhoneNumberBuilder>();
+            services.AddTransient<PlaceIdBuilder>();
+            services.AddTransient<ServiceIdBuilder>();
+            services.AddTransient<TicketIdBuilder>();
+            services.AddTransient<ContentBuilder>();
+
+            services.AddTransient<IDictionary<string, ITemplateBuilder>>(sp => new Dictionary<string, ITemplateBuilder>
+            {
+                [Constants.Templates.Content] = sp.GetRequiredService<ContentBuilder>(),
+                [Constants.Templates.PhoneNumber] = sp.GetRequiredService<PhoneNumberBuilder>(),
+                [Constants.Templates.ServiceId] = sp.GetRequiredService<ServiceIdBuilder>(),
+                [Constants.Templates.TicketId] = sp.GetRequiredService<TicketIdBuilder>(),
+                [Constants.Templates.PlaceId] = sp.GetRequiredService<PlaceIdBuilder>(),
+            });
 
             services.AddTransient<IHostedService, SyncHostedService>(sp => 
                 new SyncHostedService(

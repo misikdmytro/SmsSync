@@ -2,12 +2,13 @@
 {
     public static class Constants
     {
-        public static class MessageData
+        public static class Templates
         {
-            public const string Source = "Kyivstar";
-            public const string BearerType = "sms";
-            public const string ContentType = "text/plain";
-            public const string ServiceType = "false";
+            public const string PhoneNumber = "<PhoneNumber>";
+            public const string Content = "<Content>";
+            public const string TicketId = "<TicketId>";
+            public const string PlaceId = "<PlaceId>";
+            public const string ServiceId = "<ServiceId>";
         }
 
         public static class States
@@ -25,10 +26,6 @@
                 public const string Registration = "Registration";
                 public const string Invitation = "Invitation";
             }
-            
-            public const string PlaceIdPlaceholder = "<PlaceId>";
-            public const string ServiceIdPlaceholder = "<ServiceId>";
-            public const string TicketIdPlaceholder = "<TicketId>";
         }
     }
 }
