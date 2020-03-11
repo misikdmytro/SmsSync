@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 using Serilog;
+using SmsSync.Configuration;
 using SmsSync.Models;
 
 namespace SmsSync.Services
@@ -60,20 +62,23 @@ namespace SmsSync.Services
 
         private readonly IMessageBuilder _messageBuilder;
         private readonly IMessageHttpService _messageHttpService;
+        private readonly RouteConfiguration _routeConfiguration;
 
-        public SendSmsHandler(IMessageBuilder messageBuilder, IMessageHttpService messageHttpService)
+        public SendSmsHandler(IMessageBuilder messageBuilder, IMessageHttpService messageHttpService, 
+            RouteConfiguration routeConfiguration)
         {
             _messageBuilder = messageBuilder;
             _messageHttpService = messageHttpService;
+            _routeConfiguration = routeConfiguration;
         }
 
         public async Task HandleAsync(DbSms sms, CancellationToken token = default)
         {
             _logger.Debug("Try to build message. Sms {@Sms}", sms);
-            var message = await _messageBuilder.Build(sms);
+            var message = await _messageBuilder.Build(sms, _routeConfiguration.Body);
             
             _logger.Debug("Try to send message. Message {@Message}", message);
-            await _messageHttpService.SendSms(message, token);
+            await _messageHttpService.SendSms(_routeConfiguration, message, token);
         }
     }
     

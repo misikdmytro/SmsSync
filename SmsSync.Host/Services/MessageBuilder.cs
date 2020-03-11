@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Serilog;
 using SmsSync.Models;
@@ -10,7 +11,7 @@ namespace SmsSync.Services
 {
     public interface IMessageBuilder
     {
-        Task<JObject> Build(DbSms sms);
+        Task<object> Build(DbSms sms, IDictionary<string, string> template);
     }
 
     public class MessageBuilder : IMessageBuilder
@@ -18,21 +19,18 @@ namespace SmsSync.Services
         private readonly ILogger _logger = Log.ForContext<MessageBuilder>();
 
         private readonly IDictionary<string, ITemplateBuilder> _templateBuilders;
-        private readonly IDictionary<string, string> _template;
 
-        public MessageBuilder(IDictionary<string, ITemplateBuilder> templateBuilders, 
-            IDictionary<string, string> template)
+        public MessageBuilder(IDictionary<string, ITemplateBuilder> templateBuilders)
         {
             _templateBuilders = templateBuilders;
-            _template = template;
         }
 
-        public async Task<JObject> Build(DbSms sms)
+        public async Task<object> Build(DbSms sms, IDictionary<string, string> templateObject)
         {
             // 1. Create empty body
             var body = new JObject();
 
-            foreach (var (key, template) in _template)
+            foreach (var (key, template) in templateObject)
             {
                 // 2. Iterate via each body property
                 var value = template;
@@ -50,7 +48,7 @@ namespace SmsSync.Services
                 body[key] = value;
             }
 
-            _logger.Information("Build message {@Message}", body);
+            _logger.Information("Build message {Message}", body.ToString(Formatting.None));
 
             return body;
         }

@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
+using System.Linq;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
@@ -17,6 +17,8 @@ namespace SmsSync
 {
     public class Startup
     {
+        private const string SendMessageRouteName = "sendMessage";
+        
         private readonly ILogger _logger = Log.ForContext<Startup>();
 
         private readonly IHostingEnvironment _environment;
@@ -49,10 +51,16 @@ namespace SmsSync
             services.AddSingleton(configuration);
             services.AddSingleton(configuration.Background);
             services.AddSingleton(configuration.Http);
+            services.AddSingleton(configuration.Http.Routes);
             services.AddSingleton(configuration.Database);
             services.AddSingleton(configuration.Resources);
             
-            services.AddTransient<SendSmsHandler>();
+            services.AddTransient(sp => new SendSmsHandler(
+                sp.GetRequiredService<IMessageBuilder>(),
+                sp.GetRequiredService<IMessageHttpService>(),
+                configuration.Http.Routes.Single(r => r.Name.Equals(SendMessageRouteName)))
+            );
+            
             services.AddTransient<CommitSmsHandler>();
             services.AddTransient<FailSmsHandler>();
 
@@ -71,10 +79,7 @@ namespace SmsSync
             services.AddTransient<IMessageHttpService, MessageHttpService>();
 
             services.AddSingleton<IHttpClientsPool, HttpClientsPool>();
-            services.AddSingleton<IMessageBuilder>(sp => new MessageBuilder(
-                sp.GetRequiredService<IDictionary<string, ITemplateBuilder>>(),
-                configuration.Http.SendMessageBody)
-            );
+            services.AddSingleton<IMessageBuilder, MessageBuilder>();
 
             services.AddTransient<PhoneNumberBuilder>();
             services.AddTransient<PlaceIdBuilder>();
