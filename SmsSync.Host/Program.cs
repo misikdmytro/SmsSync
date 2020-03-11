@@ -14,6 +14,7 @@ namespace SmsSync
         public static IWebHostBuilder CreateHostBuilder(string[] args) =>
             WebHost.CreateDefaultBuilder(args)
                 .UseStartup<Startup>()
+                .SuppressStatusMessages(true)
                 .UseSerilog((context, configuration) => configuration
                     .ReadFrom.Configuration(context.Configuration));
     }
