@@ -18,9 +18,10 @@ namespace SmsSync.Background
         private readonly IInboxRepository _inboxRepository;
         private readonly IChainSmsHandler _chainSmsHandler;
         private readonly BackgroundConfiguration _backgroundConfiguration;
-        private readonly HashSet<DbSms> _smsSet;
 
         private readonly int _maxBatchSize;
+        
+        private readonly HashSet<DbSms> _smsSet;
         private readonly List<Task> _tasks;
 
         public SyncHostedService(IChainSmsHandler chainSmsHandler,
