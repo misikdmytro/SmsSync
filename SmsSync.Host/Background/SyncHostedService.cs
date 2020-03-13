@@ -39,7 +39,7 @@ namespace SmsSync.Background
             
             _maxBatchSize = maxBatchSize;
 
-            _smsSet = new HashSet<DbSms>(_maxBatchSize * 2, new SmsEqualityComparer());
+            _smsSet = new HashSet<DbSms>(_maxBatchSize, new SmsEqualityComparer());
             _tasks = new List<Task>();
         }
 
