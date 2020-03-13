@@ -44,7 +44,7 @@ namespace SmsSync.Services
                     {
                         _logger.Warning(exception, "Retry at {N} http call after {@TimeSpan}", i, ts);
                     })
-                .ExecuteAsync(async () =>
+                .ExecuteAsync(async token =>
                 {
                     var httpClient = _httpClientsPool.TakeHttpClient();
 
@@ -60,7 +60,7 @@ namespace SmsSync.Services
                                 route.Authorization.TokenValue);
                         }
 
-                        using (var response = await httpClient.SendAsync(request, cancellationToken))
+                        using (var response = await httpClient.SendAsync(request, token))
                         {
                             if (!response.IsSuccessStatusCode)
                             {
@@ -70,7 +70,7 @@ namespace SmsSync.Services
                             }
                         }
                     }
-                });
+                }, cancellationToken);
         }
     }
 }
