@@ -1,6 +1,6 @@
 ﻿namespace SmsSync.Models
 {
-    public class DbResource
+    internal class DbResource
     {
         public int PlaceId { get; set; }
     }

@@ -8,28 +8,28 @@ using SmsSync.Models;
 
 namespace SmsSync.Services
 {
-    public interface ISmsHandler
+    internal interface ISmsHandler
     {
         Task HandleAsync(DbSms sms, CancellationToken token = default);
     }
 
-    public interface IChainSmsHandler : ISmsHandler
+    internal interface IChainSmsHandler : ISmsHandler
     {
     }
     
-    public class ChainSmsHandler : IChainSmsHandler
+    internal class ChainSmsHandler : IChainSmsHandler
     {
         private readonly ILogger _logger = Log.ForContext<ChainSmsHandler>(); 
         
         private readonly IChainSmsHandler _successor;
         private readonly ISmsHandler _current;
-        private readonly IChainSmsHandler _failer;
+        private readonly IChainSmsHandler _fallback;
 
-        public ChainSmsHandler(ISmsHandler current, IChainSmsHandler successor, IChainSmsHandler failer)
+        public ChainSmsHandler(ISmsHandler current, IChainSmsHandler successor, IChainSmsHandler fallback)
         {
             _successor = successor;
             _current = current;
-            _failer = failer;
+            _fallback = fallback;
         }
 
         public async Task HandleAsync(DbSms sms, CancellationToken token = default)
@@ -44,19 +44,19 @@ namespace SmsSync.Services
             }
             catch (Exception e)
             {
-                if (_failer == null)
+                if (_fallback == null)
                 {
                     _logger.Error(e, "Handler failed with exception. No fallback scenario.");
                     throw;
                 }
                 
                 _logger.Warning(e, "Handler failed with exception. Fallback scenario start.");
-                await _failer.HandleAsync(sms, token);
+                await _fallback.HandleAsync(sms, token);
             }
         }
     }
     
-    public class SendSmsHandler : ISmsHandler
+    internal class SendSmsHandler : ISmsHandler
     {
         private readonly ILogger _logger = Log.ForContext<SendSmsHandler>();
 
@@ -82,21 +82,31 @@ namespace SmsSync.Services
         }
     }
     
-    public class CommitSmsHandler : ISmsHandler
+    internal class PromoteSmsHandler : ISmsHandler
     {
         private readonly IInboxRepository _repository;
+        private readonly string _promoteState;
 
-        public CommitSmsHandler(IInboxRepository repository) => _repository = repository;
+        protected PromoteSmsHandler(IInboxRepository repository, string promoteState)
+        {
+            _repository = repository;
+            _promoteState = promoteState;
+        }
 
-        public Task HandleAsync(DbSms sms, CancellationToken token = default) => _repository.TakeAndPromote(sms, Constants.States.Sent);
+        public Task HandleAsync(DbSms sms, CancellationToken token = default) => _repository.TakeAndPromote(sms, _promoteState);
     }
     
-    public class FailSmsHandler : ISmsHandler
+    internal class CommitSmsHandler : PromoteSmsHandler
     {
-        private readonly IInboxRepository _repository;
-
-        public FailSmsHandler(IInboxRepository repository) => _repository = repository;
-
-        public Task HandleAsync(DbSms sms, CancellationToken token = default) => _repository.TakeAndPromote(sms, Constants.States.Fail);
+        public CommitSmsHandler(IInboxRepository repository) : base(repository, Constants.States.Sent)
+        {
+        }
+    }
+    
+    internal class FailSmsHandler : PromoteSmsHandler
+    {
+        public FailSmsHandler(IInboxRepository repository) : base(repository, Constants.States.Fail)
+        {
+        }
     }
 }

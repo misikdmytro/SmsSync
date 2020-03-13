@@ -5,7 +5,7 @@ using SmsSync.Services;
 
 namespace SmsSync.Templates
 {
-    public class ServiceIdBuilder : ITemplateBuilder
+    internal class ServiceIdBuilder : ITemplateBuilder
     {
         private readonly IJobsRepository _jobsRepository;
 

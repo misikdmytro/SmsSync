@@ -4,7 +4,7 @@ using SmsSync.Models;
 
 namespace SmsSync.Equality
 {
-    public class SmsEqualityComparer : IEqualityComparer<DbSms>
+    internal class SmsEqualityComparer : IEqualityComparer<DbSms>
     {
         public bool Equals(DbSms x, DbSms y)
         {

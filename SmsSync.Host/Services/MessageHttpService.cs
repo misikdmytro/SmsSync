@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Net.Mime;
 using System.Text;
 using System.Threading;
@@ -11,12 +12,12 @@ using SmsSync.Configuration;
 
 namespace SmsSync.Services
 {
-    public interface IMessageHttpService
+    internal interface IMessageHttpService
     {
         Task SendSms(RouteConfiguration route, object message, CancellationToken cancellationToken = default);
     }
 
-    public class MessageHttpService : IMessageHttpService
+    internal class MessageHttpService : IMessageHttpService
     {
         private readonly ILogger _logger = Log.ForContext<MessageHttpService>();
 
@@ -28,7 +29,7 @@ namespace SmsSync.Services
         public MessageHttpService(HttpConfiguration configuration, IHttpClientsPool httpClientsPool)
         {
             _httpClientsPool = httpClientsPool;
-            
+
             _retryCount = configuration.Retry;
             _retryInterval = configuration.RetryInterval;
         }
@@ -47,14 +48,26 @@ namespace SmsSync.Services
                 {
                     var httpClient = _httpClientsPool.TakeHttpClient();
 
-                    using (var content = new StringContent(JsonConvert.SerializeObject(message), Encoding.UTF8, MediaTypeNames.Application.Json))
-                    using (var request = new HttpRequestMessage(new HttpMethod(route.Method), route.Route) { Content = content })
-                    using (var response = await httpClient.SendAsync(request, cancellationToken))
+                    using (var content = new StringContent(JsonConvert.SerializeObject(message), Encoding.UTF8,
+                        MediaTypeNames.Application.Json))
+                    using (var request = new HttpRequestMessage(new HttpMethod(route.Method), route.Route)
+                        { Content = content })
                     {
-                        if (!response.IsSuccessStatusCode)
+                        if (route.Authorization != null)
                         {
-                            var result = await response.Content.ReadAsStringAsync();
-                            throw new InvalidOperationException($"External service returned {response.StatusCode} status code. Content {result}");
+                            request.Headers.Authorization = new AuthenticationHeaderValue(
+                                route.Authorization.TokenScheme,
+                                route.Authorization.TokenValue);
+                        }
+
+                        using (var response = await httpClient.SendAsync(request, cancellationToken))
+                        {
+                            if (!response.IsSuccessStatusCode)
+                            {
+                                var result = await response.Content.ReadAsStringAsync();
+                                throw new InvalidOperationException(
+                                    $"External service returned {response.StatusCode} status code. Content {result}");
+                            }
                         }
                     }
                 });

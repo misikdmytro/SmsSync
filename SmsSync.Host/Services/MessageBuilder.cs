@@ -9,12 +9,12 @@ using SmsSync.Templates;
 
 namespace SmsSync.Services
 {
-    public interface IMessageBuilder
+    internal interface IMessageBuilder
     {
         Task<object> Build(DbSms sms, IDictionary<string, string> template);
     }
 
-    public class MessageBuilder : IMessageBuilder
+    internal class MessageBuilder : IMessageBuilder
     {
         private readonly ILogger _logger = Log.ForContext<MessageBuilder>();
 

@@ -8,7 +8,7 @@ using SmsSync.Configuration;
 
 namespace SmsSync.Services
 {
-    public class BaseRepository
+    internal class BaseRepository
     {
         private readonly ILogger _logger = Log.ForContext<BaseRepository>();
         

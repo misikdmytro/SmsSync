@@ -2,7 +2,7 @@
 
 namespace SmsSync.Models
 {
-    public class DbSms
+    internal class DbSms
     {
         public Language LanguageId { get; set; }
         public int OrderId { get; set; }

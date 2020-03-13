@@ -2,7 +2,7 @@
 
 namespace SmsSync.Configuration
 {
-    public class RetryConfigurationBase
+    internal class RetryConfigurationBase
     {
         public int Retry { get; set; }
         public TimeSpan RetryInterval { get; set; }

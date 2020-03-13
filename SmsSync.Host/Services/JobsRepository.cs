@@ -5,12 +5,12 @@ using SmsSync.Models;
 
 namespace SmsSync.Services
 {
-    public interface IJobsRepository
+    internal interface IJobsRepository
     {
         Task<DbJob> GetJobById(int jobId, int terminalId);
     }
 
-    public class JobsRepository : BaseRepository, IJobsRepository
+    internal class JobsRepository : BaseRepository, IJobsRepository
     {
         private const string GetJobQuery = @"
             SELECT DescriptionRu = Description_ru, DescriptionUa = Description_ua, DescriptionEn = Description_en

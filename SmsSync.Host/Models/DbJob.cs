@@ -1,6 +1,6 @@
 ﻿namespace SmsSync.Models
 {
-    public class DbJob
+    internal class DbJob
     {
         public string DescriptionRu { get; set; }
         public string DescriptionUa { get; set; }

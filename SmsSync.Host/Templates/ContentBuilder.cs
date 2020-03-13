@@ -5,7 +5,7 @@ using SmsSync.Models;
 
 namespace SmsSync.Templates
 {
-    public class ContentBuilder : ITemplateBuilder
+    internal class ContentBuilder : ITemplateBuilder
     {
         private readonly ResourcesConfiguration _resourcesConfiguration;
 

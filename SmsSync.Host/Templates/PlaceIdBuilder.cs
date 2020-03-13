@@ -4,7 +4,7 @@ using SmsSync.Services;
 
 namespace SmsSync.Templates
 {
-    public class PlaceIdBuilder : ITemplateBuilder
+    internal class PlaceIdBuilder : ITemplateBuilder
     {
         private readonly IResourceRepository _resourceRepository;
 

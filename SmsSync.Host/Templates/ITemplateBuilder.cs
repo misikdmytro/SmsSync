@@ -3,7 +3,7 @@ using SmsSync.Models;
 
 namespace SmsSync.Templates
 {
-    public interface ITemplateBuilder
+    internal interface ITemplateBuilder
     {
         Task<string> Build(DbSms sms);
     }

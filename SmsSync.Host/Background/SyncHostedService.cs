@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
@@ -12,7 +11,7 @@ using SmsSync.Services;
 
 namespace SmsSync.Background
 {
-    public class SyncHostedService : BackgroundService
+    internal class SyncHostedService : BackgroundService
     {
         private readonly ILogger _logger = Log.ForContext<SyncHostedService>();
 

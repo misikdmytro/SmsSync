@@ -7,13 +7,13 @@ using SmsSync.Models;
 
 namespace SmsSync.Services
 {
-    public interface IInboxRepository
+    internal interface IInboxRepository
     {
         Task<DbSms[]> TakeAndPromote(string oldState, string newState, int batchSize = int.MaxValue);
         Task<DbSms[]> TakeAndPromote(DbSms dbSms, string newState, int batchSize = int.MaxValue);
     }
 
-    public class InboxRepository : BaseRepository, IInboxRepository
+    internal class InboxRepository : BaseRepository, IInboxRepository
     {
         private readonly ILogger _logger = Log.ForContext<InboxRepository>();
 

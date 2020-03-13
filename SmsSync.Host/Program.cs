@@ -4,7 +4,7 @@ using Serilog;
 
 namespace SmsSync
 {
-    public class Program
+    internal class Program
     {
         public static void Main(string[] args)
         {

@@ -15,7 +15,7 @@ using IHostingEnvironment = Microsoft.AspNetCore.Hosting.IHostingEnvironment;
 
 namespace SmsSync
 {
-    public class Startup
+    internal class Startup
     {
         private const string SendMessageRouteName = "sendMessage";
         
@@ -51,14 +51,14 @@ namespace SmsSync
             services.AddSingleton(configuration);
             services.AddSingleton(configuration.Background);
             services.AddSingleton(configuration.Http);
-            services.AddSingleton(configuration.Http.Routes);
+            services.AddSingleton(configuration.Routes);
             services.AddSingleton(configuration.Database);
             services.AddSingleton(configuration.Resources);
             
             services.AddTransient(sp => new SendSmsHandler(
                 sp.GetRequiredService<IMessageBuilder>(),
                 sp.GetRequiredService<IMessageHttpService>(),
-                configuration.Http.Routes.Single(r => r.Name.Equals(SendMessageRouteName)))
+                configuration.Routes.Single(r => r.Name.Equals(SendMessageRouteName)))
             );
             
             services.AddTransient<CommitSmsHandler>();
@@ -101,7 +101,7 @@ namespace SmsSync
                     sp.GetRequiredService<IChainSmsHandler>(),
                     sp.GetRequiredService<IInboxRepository>(),
                     configuration.Background,
-                    configuration.Database.BatchSize
+                    configuration.Database.MaxBatchSize
                 )
             );
 

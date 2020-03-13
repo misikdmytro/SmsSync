@@ -5,12 +5,12 @@ using SmsSync.Models;
 
 namespace SmsSync.Services
 {
-    public interface IResourceRepository
+    internal interface IResourceRepository
     {
         Task<DbResource> GetResource(int resourceId, int terminalId);
     }
 
-    public class ResourceRepository : BaseRepository, IResourceRepository
+    internal class ResourceRepository : BaseRepository, IResourceRepository
     {
         private const string ReadQuery = @"
             SELECT PlaceId = t.PlaceId

@@ -1,6 +1,6 @@
 ﻿namespace SmsSync
 {
-    public static class Constants
+    internal static class Constants
     {
         public static class Templates
         {

@@ -12,7 +12,7 @@ namespace SmsSync.Services
         HttpClient TakeHttpClient();
     }
 
-    public class HttpClientsPool : IHttpClientsPool
+    internal class HttpClientsPool : IHttpClientsPool
     {
         private readonly ILogger _logger = Log.ForContext<HttpClientsPool>();
         
@@ -33,12 +33,7 @@ namespace SmsSync.Services
             _pool = Enumerable.Range(0, configuration.PoolSize)
                 .Select(x => new HttpClient
                 {
-                    BaseAddress = new Uri(configuration.BaseUrl),
-                    Timeout = configuration.Timeout,
-                    DefaultRequestHeaders =
-                    {
-                        Authorization = new AuthenticationHeaderValue(configuration.TokenScheme, configuration.TokenValue)
-                    }
+                    Timeout = configuration.Timeout
                 })
                 .ToArray();
         }

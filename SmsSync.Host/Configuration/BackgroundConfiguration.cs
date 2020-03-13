@@ -2,7 +2,7 @@
 
 namespace SmsSync.Configuration
 {
-    public class BackgroundConfiguration
+    internal class BackgroundConfiguration
     {
         public TimeSpan PingInterval { get; set; }
     }
