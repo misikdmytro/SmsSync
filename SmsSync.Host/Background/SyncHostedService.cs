@@ -103,10 +103,6 @@ namespace SmsSync.Host.Background
             {
 	            _logger.Warning(oce, "Operation was canceled. Ignore.");
             }
-            finally
-            {
-                await Task.WhenAll(_tasks).ConfigureAwait(false);
-            }
         }
 
         public override async Task StopAsync(CancellationToken cancellationToken)
