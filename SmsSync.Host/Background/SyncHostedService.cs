@@ -9,7 +9,7 @@ using SmsSync.Equality;
 using SmsSync.Models;
 using SmsSync.Services;
 
-namespace SmsSync.Host.Background
+namespace SmsSync.Background
 {
     internal class SyncHostedService : BackgroundService
     {

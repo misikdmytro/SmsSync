@@ -5,8 +5,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Serilog;
+using SmsSync.Background;
 using SmsSync.Configuration;
-using SmsSync.Host.Background;
 using SmsSync.Services;
 using SmsSync.Templates;
 
