@@ -1,11 +1,12 @@
-﻿using System.Threading.Tasks;
+﻿using System.Threading;
+using System.Threading.Tasks;
 using SmsSync.Models;
 
 namespace SmsSync.Templates
 {
     internal class PhoneNumberBuilder : ITemplateBuilder
     {
-        public Task<string> Build(DbSms sms)
+        public Task<string> Build(DbSms sms, CancellationToken cancellationToken = default)
         {
             var phoneNumber = sms.ClientPhone;
             

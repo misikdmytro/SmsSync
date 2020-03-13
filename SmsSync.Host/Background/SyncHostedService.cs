@@ -62,7 +62,7 @@ namespace SmsSync.Background
                         if (currentBatch > 0)
                         {
                             messages = await _inboxRepository.TakeAndPromote(Constants.States.New,
-                                Constants.States.InProgress, currentBatch);
+                                Constants.States.InProgress, currentBatch, cancellationToken);
                         }
 
                         foreach (var sms in messages)

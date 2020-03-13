@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -11,7 +12,7 @@ namespace SmsSync.Services
 {
     internal interface IMessageBuilder
     {
-        Task<object> Build(DbSms sms, IDictionary<string, string> template);
+        Task<object> Build(DbSms sms, IDictionary<string, string> template, CancellationToken cancellationToken = default);
     }
 
     internal class MessageBuilder : IMessageBuilder
@@ -25,7 +26,7 @@ namespace SmsSync.Services
             _templateBuilders = templateBuilders;
         }
 
-        public async Task<object> Build(DbSms sms, IDictionary<string, string> templateObject)
+        public async Task<object> Build(DbSms sms, IDictionary<string, string> templateObject, CancellationToken cancellationToken = default)
         {
             // 1. Create empty body
             var body = new JObject();
@@ -40,7 +41,7 @@ namespace SmsSync.Services
                     // 3. Replace placeholders with real values
                     foreach (var (templateKey, templateBuilder) in _templateBuilders.Where(tb => value.Contains(tb.Key)))
                     {
-                        value = value.Replace(templateKey, await templateBuilder.Build(sms));
+                        value = value.Replace(templateKey, await templateBuilder.Build(sms, cancellationToken));
                     }
                 } while (_templateBuilders.Any(tb => value.Contains(tb.Key)));
 

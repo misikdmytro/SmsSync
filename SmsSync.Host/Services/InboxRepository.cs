@@ -1,4 +1,5 @@
 ﻿using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Dapper;
 using Serilog;
@@ -9,14 +10,14 @@ namespace SmsSync.Services
 {
     internal interface IInboxRepository
     {
-        Task<DbSms[]> TakeAndPromote(string oldState, string newState, int batchSize = int.MaxValue);
-        Task<DbSms[]> TakeAndPromote(DbSms dbSms, string newState, int batchSize = int.MaxValue);
+        Task<DbSms[]> TakeAndPromote(string oldState, string newState, int batchSize = int.MaxValue, 
+            CancellationToken  cancellationToken = default);
+        Task<DbSms[]> TakeAndPromote(DbSms dbSms, string newState, int batchSize = int.MaxValue, 
+            CancellationToken  cancellationToken = default);
     }
 
     internal class InboxRepository : BaseRepository, IInboxRepository
     {
-        private readonly ILogger _logger = Log.ForContext<InboxRepository>();
-
         private const string UpdateQueryByState = @"
                     UPDATE dboSmsEvent
                         SET State = @State, LastUpdateTime = CURRENT_TIMESTAMP
@@ -41,27 +42,26 @@ namespace SmsSync.Services
         {
         }
 
-        public Task<DbSms[]> TakeAndPromote(string oldState, string newState, int batchSize = int.MaxValue)
+        public Task<DbSms[]> TakeAndPromote(string oldState, string newState, int batchSize = int.MaxValue, 
+            CancellationToken cancellationToken = default)
         {
-            return ExecuteAsync(async connection =>
-            {
-                var @params = new { BatchSize = batchSize, State = newState, CurrentState = oldState };
-
-                _logger.Debug("Execute {MethodName} with parameters {@Params}", nameof(TakeAndPromote), @params);
-
-                var sms = await connection.QueryAsync<DbSms>(UpdateQueryByState,
-                    @params,
-                    commandTimeout: CommandTimeout);
-
-                return sms.ToArray();
-            });
+            var query = BuildQuery(
+                () => new { BatchSize = batchSize, State = newState, CurrentState = oldState },
+                async (connection, command) =>
+                {
+                    var sms = await connection.QueryAsync<DbSms>(command);
+                    return sms.ToArray();
+                },
+                UpdateQueryByState);
+            
+            return ExecuteAsync(query, cancellationToken);
         }
 
-        public Task<DbSms[]> TakeAndPromote(DbSms dbSms, string newState, int batchSize = int.MaxValue)
+        public Task<DbSms[]> TakeAndPromote(DbSms dbSms, string newState, int batchSize = int.MaxValue, 
+            CancellationToken cancellationToken = default)
         {
-            return ExecuteAsync(async connection =>
-            {
-                var @params = new
+            var query = BuildQuery(
+                () => new
                 {
                     dbSms.OrderId,
                     dbSms.TerminalId,
@@ -70,16 +70,15 @@ namespace SmsSync.Services
                     dbSms.LastUpdateTime,
                     dbSms.SetTime,
                     BatchSize = batchSize,
-                };
-
-                _logger.Debug("Execute {MethodName} with parameters {@Params}", nameof(TakeAndPromote), @params);
-
-                var sms = await connection.QueryAsync<DbSms>(UpdateQueryBySms,
-                    @params,
-                    commandTimeout: CommandTimeout);
-
-                return sms.ToArray();
-            });
+                },
+                async (connection, command) =>
+                {
+                    var sms = await connection.QueryAsync<DbSms>(command);
+                    return sms.ToArray();
+                },
+                UpdateQueryBySms);
+            
+            return ExecuteAsync(query, cancellationToken);
         }
     }
 }

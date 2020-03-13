@@ -1,5 +1,7 @@
-﻿using System.Threading.Tasks;
+﻿using System.Threading;
+using System.Threading.Tasks;
 using Dapper;
+using Serilog;
 using SmsSync.Configuration;
 using SmsSync.Models;
 
@@ -7,7 +9,7 @@ namespace SmsSync.Services
 {
     internal interface IResourceRepository
     {
-        Task<DbResource> GetResource(int resourceId, int terminalId);
+        Task<DbResource> GetResource(int resourceId, int terminalId, CancellationToken cancellationToken = default);
     }
 
     internal class ResourceRepository : BaseRepository, IResourceRepository
@@ -22,11 +24,14 @@ namespace SmsSync.Services
         {
         }
 
-        public Task<DbResource> GetResource(int resourceId, int terminalId)
+        public Task<DbResource> GetResource(int resourceId, int terminalId, CancellationToken cancellationToken = default)
         {
-            return ExecuteAsync(connection => connection.QuerySingleAsync<DbResource>(ReadQuery,
-                new {ResourceId = resourceId, TerminalId = terminalId},
-                commandTimeout: CommandTimeout));
+            var query = BuildQuery(
+                () => new { ResourceId = resourceId, TerminalId = terminalId },
+                (connection, command) => connection.QuerySingleAsync<DbResource>(command),
+                ReadQuery);
+            
+            return ExecuteAsync(query, cancellationToken);
         }
     }
 }

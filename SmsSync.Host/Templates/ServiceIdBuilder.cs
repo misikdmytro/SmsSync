@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using SmsSync.Models;
 using SmsSync.Services;
@@ -15,9 +16,9 @@ namespace SmsSync.Templates
         }
 
 
-        public async Task<string> Build(DbSms sms)
+        public async Task<string> Build(DbSms sms, CancellationToken cancellationToken = default)
         {
-            var job = await _jobsRepository.GetJobById(sms.JobId, sms.TerminalId);
+            var job = await _jobsRepository.GetJobById(sms.JobId, sms.TerminalId, cancellationToken);
 
             switch (sms.LanguageId)
             {

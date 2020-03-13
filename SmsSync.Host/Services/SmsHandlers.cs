@@ -75,7 +75,7 @@ namespace SmsSync.Services
         public async Task HandleAsync(DbSms sms, CancellationToken token = default)
         {
             _logger.Debug("Try to build message. Sms {@Sms}", sms);
-            var message = await _messageBuilder.Build(sms, _routeConfiguration.Body);
+            var message = await _messageBuilder.Build(sms, _routeConfiguration.Body, token);
             
             _logger.Debug("Try to send message. Message {@Message}", message);
             await _messageHttpService.SendSms(_routeConfiguration, message, token);
@@ -93,7 +93,8 @@ namespace SmsSync.Services
             _promoteState = promoteState;
         }
 
-        public Task HandleAsync(DbSms sms, CancellationToken token = default) => _repository.TakeAndPromote(sms, _promoteState);
+        // operation should be done even if cancellation requested
+        public Task HandleAsync(DbSms sms, CancellationToken token = default) => _repository.TakeAndPromote(sms, _promoteState, cancellationToken: CancellationToken.None);
     }
     
     internal class CommitSmsHandler : PromoteSmsHandler

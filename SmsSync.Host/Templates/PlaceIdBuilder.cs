@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Threading;
+using System.Threading.Tasks;
 using SmsSync.Models;
 using SmsSync.Services;
 
@@ -13,9 +14,9 @@ namespace SmsSync.Templates
             _resourceRepository = resourceRepository;
         }
 
-        public async Task<string> Build(DbSms sms)
+        public async Task<string> Build(DbSms sms, CancellationToken cancellationToken = default)
         {
-            var resource = await _resourceRepository.GetResource(sms.ResourceId, sms.TerminalId);
+            var resource = await _resourceRepository.GetResource(sms.ResourceId, sms.TerminalId, cancellationToken);
             return resource.PlaceId.ToString();
         }
     }

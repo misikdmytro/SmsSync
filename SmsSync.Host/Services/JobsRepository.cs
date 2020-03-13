@@ -1,5 +1,7 @@
-﻿using System.Threading.Tasks;
+﻿using System.Threading;
+using System.Threading.Tasks;
 using Dapper;
+using Serilog;
 using SmsSync.Configuration;
 using SmsSync.Models;
 
@@ -7,7 +9,7 @@ namespace SmsSync.Services
 {
     internal interface IJobsRepository
     {
-        Task<DbJob> GetJobById(int jobId, int terminalId);
+        Task<DbJob> GetJobById(int jobId, int terminalId, CancellationToken cancellationToken = default);
     }
 
     internal class JobsRepository : BaseRepository, IJobsRepository
@@ -21,11 +23,14 @@ namespace SmsSync.Services
         {
         }
         
-        public Task<DbJob> GetJobById(int jobId, int terminalId)
+        public Task<DbJob> GetJobById(int jobId, int terminalId, CancellationToken cancellationToken = default)
         {
-            return ExecuteAsync(connection => connection.QuerySingleAsync<DbJob>(GetJobQuery,
-                new {JobId = jobId, TerminalId = terminalId},
-                commandTimeout: CommandTimeout));
+            var query = BuildQuery(
+                () => new { JobId = jobId, TerminalId = terminalId },
+                (connection, command) => connection.QuerySingleAsync<DbJob>(command),
+                GetJobQuery);
+            
+            return ExecuteAsync(query, cancellationToken);
         }
     }
 }

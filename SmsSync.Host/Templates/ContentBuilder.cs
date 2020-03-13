@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using SmsSync.Configuration;
 using SmsSync.Models;
@@ -14,7 +15,7 @@ namespace SmsSync.Templates
             _resourcesConfiguration = resourcesConfiguration;
         }
 
-        public Task<string> Build(DbSms sms)
+        public Task<string> Build(DbSms sms, CancellationToken cancellationToken = default)
         {
             var messageType = sms.ResourceId == -1
                 ? Constants.Resources.Types.Registration
