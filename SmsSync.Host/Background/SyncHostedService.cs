@@ -20,24 +20,24 @@ namespace SmsSync.Background
         private readonly BackgroundConfiguration _backgroundConfiguration;
         private readonly HashSet<DbSms> _smsSet;
 
-        private readonly int _batchSize;
+        private readonly int _maxBatchSize;
 
         public SyncHostedService(IChainSmsHandler chainSmsHandler,
             IInboxRepository inboxRepository, BackgroundConfiguration backgroundConfiguration, 
-            int batchSize)
+            int maxBatchSize)
         {
             _chainSmsHandler = chainSmsHandler;
             _inboxRepository = inboxRepository;
             _backgroundConfiguration = backgroundConfiguration;
 
-            if (batchSize <= 0)
+            if (maxBatchSize <= 0)
             {
-	            throw new ArgumentException("Batch size should be positive", nameof(batchSize));
+	            throw new ArgumentException("Batch size should be positive", nameof(maxBatchSize));
             }
             
-            _batchSize = batchSize;
+            _maxBatchSize = maxBatchSize;
 
-            _smsSet = new HashSet<DbSms>(_batchSize * 2, new SmsEqualityComparer());
+            _smsSet = new HashSet<DbSms>(_maxBatchSize * 2, new SmsEqualityComparer());
         }
 
         protected override async Task ExecuteAsync(CancellationToken cancellationToken)
@@ -52,7 +52,7 @@ namespace SmsSync.Background
 	            {
                     try
                     {
-                        var currentBatch = _batchSize - tasks.Count;
+                        var currentBatch = _maxBatchSize - tasks.Count;
 
                         var messages = Array.Empty<DbSms>();
                         if (currentBatch > 0)
