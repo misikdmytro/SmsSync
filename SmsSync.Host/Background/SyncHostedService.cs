@@ -9,7 +9,7 @@ using SmsSync.Equality;
 using SmsSync.Models;
 using SmsSync.Services;
 
-namespace SmsSync.Background
+namespace SmsSync.Host.Background
 {
     internal class SyncHostedService : BackgroundService
     {
@@ -21,6 +21,7 @@ namespace SmsSync.Background
         private readonly HashSet<DbSms> _smsSet;
 
         private readonly int _maxBatchSize;
+        private readonly List<Task> _tasks;
 
         public SyncHostedService(IChainSmsHandler chainSmsHandler,
             IInboxRepository inboxRepository, BackgroundConfiguration backgroundConfiguration, 
@@ -38,21 +39,24 @@ namespace SmsSync.Background
             _maxBatchSize = maxBatchSize;
 
             _smsSet = new HashSet<DbSms>(_maxBatchSize * 2, new SmsEqualityComparer());
+            _tasks = new List<Task>();
+        }
+
+        public override Task StartAsync(CancellationToken cancellationToken)
+        {
+            _logger.Information("Start main threads.");
+            return base.StartAsync(cancellationToken);
         }
 
         protected override async Task ExecuteAsync(CancellationToken cancellationToken)
         {
-            _logger.Information("Start main threads.");
-            
-            var tasks = new List<Task>();
-
             try
             {
 	            while (!cancellationToken.IsCancellationRequested)
 	            {
                     try
                     {
-                        var currentBatch = _maxBatchSize - tasks.Count;
+                        var currentBatch = _maxBatchSize - _tasks.Count;
 
                         var messages = Array.Empty<DbSms>();
                         if (currentBatch > 0)
@@ -65,23 +69,23 @@ namespace SmsSync.Background
                         {
                             if (_smsSet.Add(sms))
                             {
-                                var task = Task.Run(() => _chainSmsHandler.HandleAsync(sms, cancellationToken),
-                                    cancellationToken).ContinueWith(t =>
-                                {
-                                    if (!t.IsCompletedSuccessfully)
+                                var task = _chainSmsHandler.HandleAsync(sms, cancellationToken)
+                                    .ContinueWith(t =>
                                     {
-                                        _logger.Error(t.Exception, "Task completed with errors. Sms {@Sms}", sms);
-                                    }
+                                        if (!t.IsCompletedSuccessfully)
+                                        {
+                                            _logger.Error(t.Exception, "Task completed with errors. Sms {@Sms}", sms);
+                                        }
 
-                                    _smsSet.Remove(sms);
-                                    _logger.Debug("Sms {@Sms} removed from set", sms);
-                                }, cancellationToken);
+                                        _smsSet.Remove(sms);
+                                        _logger.Debug("Sms {@Sms} removed from set", sms);
+                                    }, CancellationToken.None);
 
-                                tasks.Add(task);
+                                _tasks.Add(task);
                             }
                         }
 
-                        tasks.RemoveAll(t => t.IsCompleted);
+                        _tasks.RemoveAll(t => t.IsCompleted);
                         await Task.Delay(_backgroundConfiguration.PingInterval, cancellationToken);
                     }
                     catch (OperationCanceledException)
@@ -101,9 +105,14 @@ namespace SmsSync.Background
             }
             finally
             {
-                await Task.WhenAll(tasks);
+                await Task.WhenAll(_tasks).ConfigureAwait(false);
             }
-            
+        }
+
+        public override async Task StopAsync(CancellationToken cancellationToken)
+        {
+            await base.StopAsync(cancellationToken);
+            await Task.WhenAll(_tasks).ConfigureAwait(false);
             _logger.Information("Stop main threads.");
         }
     }

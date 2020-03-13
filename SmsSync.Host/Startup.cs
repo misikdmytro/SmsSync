@@ -1,17 +1,14 @@
 using System.Collections.Generic;
 using System.Linq;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Serilog;
-using SmsSync.Background;
 using SmsSync.Configuration;
+using SmsSync.Host.Background;
 using SmsSync.Services;
 using SmsSync.Templates;
-using IHostingEnvironment = Microsoft.AspNetCore.Hosting.IHostingEnvironment;
 
 namespace SmsSync
 {
@@ -21,23 +18,12 @@ namespace SmsSync
         
         private readonly ILogger _logger = Log.ForContext<Startup>();
 
-        private readonly IHostingEnvironment _environment;
-
-        public Startup(IHostingEnvironment env)
+        public Startup(IConfigurationRoot configuration)
         {
-            _logger.Information("Starting service. Environment {Env}", env.EnvironmentName);
-
-            var builder = new ConfigurationBuilder()
-                .SetBasePath(env.ContentRootPath)
-                .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
-                .AddJsonFile($"appsettings.{env.EnvironmentName}.json", optional: true)
-                .AddEnvironmentVariables();
-
-            Configuration = builder.Build();
-            _environment = env;
+            Configuration = configuration;
         }
 
-        public IConfigurationRoot Configuration { get; }
+        private IConfigurationRoot Configuration { get; }
 
         public void ConfigureServices(IServiceCollection services)
         {
@@ -96,7 +82,7 @@ namespace SmsSync
                 [Constants.Templates.PlaceId] = sp.GetRequiredService<PlaceIdBuilder>(),
             });
 
-            services.AddTransient<IHostedService, SyncHostedService>(sp => 
+            services.AddTransient<BackgroundService>(sp => 
                 new SyncHostedService(
                     sp.GetRequiredService<IChainSmsHandler>(),
                     sp.GetRequiredService<IInboxRepository>(),
@@ -106,20 +92,6 @@ namespace SmsSync
             );
 
             _logger.Information("Services configured.");
-        }
-
-        public void Configure(IApplicationBuilder app, IHostingEnvironment env)
-        {
-            _logger.Information("Configuring app...");
-
-            if (env.IsDevelopment())
-            {
-                app.UseDeveloperExceptionPage();
-            }
-
-            app.UseMvc();
-
-            _logger.Information("App configured.");
         }
     }
 }
